@@ -30,9 +30,16 @@ backend/data/raw_docs/
 *.db
 backend/data/workspace.db
 
+# Video Production Assets
 video/raw_recordings/
+video/test_frames/
 video/**/*.wav
 video/**/*.mp4
 video/**/*.webm
 video/audio/*.wav
-video/scenes/
+video/scenes/*.mp4
+video/**/__pycache__/
+
+# Whitelist Video Deliverables & Pipeline Scripts
+!video/mech_g_pitch.mp4
+!video/scenes/concat_list.txt
