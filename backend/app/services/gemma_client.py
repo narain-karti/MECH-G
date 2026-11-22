@@ -46,8 +46,15 @@ class GemmaClient:
             return None
         if not self.api_key:
             return None
-        from google import genai
-        return genai.Client(api_key=self.api_key)
+        try:
+            from google import genai
+            return genai.Client(api_key=self.api_key)
+        except (ImportError, AttributeError) as exc:
+            # A partially configured edge machine must keep its deterministic
+            # local workflow available. The caller already provides a safe,
+            # citation-grounded fallback when this returns None.
+            logger.warning("Google GenAI SDK unavailable; using offline fallback: %s", exc)
+            return None
 
     async def analyze_visual_fault(
         self,

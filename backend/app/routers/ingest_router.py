@@ -3,13 +3,14 @@ import shutil
 import logging
 from typing import List
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
 
 from app.config import settings
 from app.models.ingest_models import IngestResponse
 from app.services.okf_compiler.compiler_service import OKFCompilerService
 from app.services.okf_compiler.manifest import load_manifest
 from app.database.repository import DocumentRepository
+from app.database.notebook_repository import NotebookRepository
 from app.routers.graph_router import get_graph_engine
 from app.services.graph_engine import OKFGraphEngine
 
@@ -24,6 +25,7 @@ def get_compiler_service() -> OKFCompilerService:
 @router.post("/upload", response_model=IngestResponse)
 async def upload_and_compile(
     files: List[UploadFile] = File(...),
+    notebook_id: str | None = Form(default=None),
     compiler: OKFCompilerService = Depends(get_compiler_service),
     engine: OKFGraphEngine = Depends(get_graph_engine)
 ):
@@ -33,6 +35,8 @@ async def upload_and_compile(
     """
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
+    if notebook_id and not NotebookRepository.get(notebook_id):
+        raise HTTPException(status_code=404, detail="Mission notebook not found")
 
     saved_paths: List[str] = []
     doc_id_map = {}
@@ -58,6 +62,8 @@ async def upload_and_compile(
                 file_size=file_size,
                 status="COMPILING_OKF"
             )
+            if notebook_id:
+                NotebookRepository.link_document(notebook_id, doc_id)
             doc_id_map[safe_filename] = doc_id
         except Exception as e:
             logger.error("Failed to save uploaded file %s: %s", safe_filename, e)

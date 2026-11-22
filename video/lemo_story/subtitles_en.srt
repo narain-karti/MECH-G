@@ -1,0 +1,27 @@
+1
+00:00:01,200 --> 00:00:07,500
+Welcome to the Frontline Depot! When critical machines blow a seal in the field, every second counts.
+
+2
+00:00:08,400 --> 00:00:15,000
+Cloud chatbots choke with zero signal, leaving engineers stranded with massive four-thousand-page manuals.
+
+3
+00:00:16,200 --> 00:00:21,500
+Meet MECH-G! Your offline AI companion for mission-critical machine repair.
+
+4
+00:00:22,200 --> 00:00:27,500
+Step one: Snap! Multimodal vision instantly identifies valve PRV-992-B and flags the leaking seal.
+
+5
+00:00:28,200 --> 00:00:33,500
+Step two: Lock! OSHA safety gates enforce zero-energy isolation before anyone touches a bolt.
+
+6
+00:00:34,200 --> 00:00:39,500
+Step three: Fix and verify! Calibrated thirty-five newton-meter torque sequence, verified by our local graph.
+
+7
+00:00:40,200 --> 00:00:47,500
+Eighty-four percent faster repairs, completely offline. MECH-G: The frontline engineer's best friend!

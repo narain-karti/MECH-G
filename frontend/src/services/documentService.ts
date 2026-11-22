@@ -2,8 +2,9 @@ import { API_BASE, fetchWithTimeout } from "./apiClient";
 import { SourceDocument } from "../types/workspace";
 
 export class DocumentService {
-  static async listDocuments(): Promise<SourceDocument[]> {
-    const res = await fetchWithTimeout("/api/documents", { method: "GET" });
+  static async listDocuments(notebookId?: string): Promise<SourceDocument[]> {
+    const suffix = notebookId ? `?notebook_id=${encodeURIComponent(notebookId)}` : "";
+    const res = await fetchWithTimeout(`/api/documents${suffix}`, { method: "GET" });
     if (!res.ok) {
       throw new Error(`Failed to list documents: ${res.statusText}`);
     }
@@ -25,11 +26,12 @@ export class DocumentService {
     }
   }
 
-  static async uploadDocuments(files: File[]): Promise<any> {
+  static async uploadDocuments(files: File[], notebookId?: string): Promise<any> {
     const formData = new FormData();
     for (const file of files) {
       formData.append("files", file);
     }
+    if (notebookId) formData.append("notebook_id", notebookId);
 
     const res = await fetch(`${API_BASE}/api/ingest/upload`, {
       method: "POST",

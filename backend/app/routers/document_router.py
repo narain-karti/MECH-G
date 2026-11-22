@@ -2,7 +2,7 @@ import os
 import logging
 from typing import List
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 
 from app.config import settings
 from app.models.chat_models import DocumentResponse
@@ -16,9 +16,9 @@ router = APIRouter(prefix="/api/documents", tags=["Document Management"])
 
 
 @router.get("", response_model=List[DocumentResponse])
-async def list_documents():
+async def list_documents(notebook_id: str | None = Query(default=None)):
     """Lists all uploaded documents and source library items with processing status."""
-    docs = DocumentRepository.list_all()
+    docs = DocumentRepository.list_all(notebook_id)
     results = []
     for d in docs:
         results.append(DocumentResponse(

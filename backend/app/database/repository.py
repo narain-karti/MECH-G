@@ -25,16 +25,20 @@ class DocumentRepository:
         return DocumentRepository.get(doc_id)
 
     @staticmethod
-    def list_all() -> List[Dict[str, Any]]:
+    def list_all(notebook_id: Optional[str] = None) -> List[Dict[str, Any]]:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            query = """
                 SELECT d.*, COUNT(dn.node_path) as actual_nodes_count
                 FROM documents d
                 LEFT JOIN document_nodes dn ON d.id = dn.document_id
-                GROUP BY d.id
-                ORDER BY d.created_at DESC
-            """)
+            """
+            params: list = []
+            if notebook_id:
+                query += " INNER JOIN notebook_documents nd ON nd.document_id = d.id WHERE nd.notebook_id = ?"
+                params.append(notebook_id)
+            query += " GROUP BY d.id ORDER BY d.created_at DESC"
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             results = []
             for r in rows:
@@ -115,18 +119,22 @@ class DocumentRepository:
             cursor.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
         return doc
 
+    @staticmethod
+    def list_for_notebook(notebook_id: str) -> List[Dict[str, Any]]:
+        return DocumentRepository.list_all(notebook_id)
+
 
 class ConversationRepository:
     @staticmethod
-    def create(title: str = "New Conversation", selected_doc_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+    def create(title: str = "New Conversation", selected_doc_ids: Optional[List[str]] = None, notebook_id: Optional[str] = None) -> Dict[str, Any]:
         conv_id = f"conv-{uuid.uuid4().hex[:8]}"
         docs_json = json.dumps(selected_doc_ids or [])
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO conversations (id, title, selected_document_ids, created_at, updated_at)
-                VALUES (?, ?, ?, datetime('now'), datetime('now'))
-            """, (conv_id, title, docs_json))
+                INSERT INTO conversations (id, title, notebook_id, selected_document_ids, created_at, updated_at)
+                VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+            """, (conv_id, title, notebook_id, docs_json))
         return ConversationRepository.get(conv_id)
 
     @staticmethod
@@ -144,6 +152,22 @@ class ConversationRepository:
                     c["selected_document_ids"] = []
                 results.append(c)
             return results
+
+    @staticmethod
+    def list_for_notebook(notebook_id: str) -> List[Dict[str, Any]]:
+        with get_db_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM conversations WHERE notebook_id = ? ORDER BY updated_at DESC", (notebook_id,)
+            ).fetchall()
+        results = []
+        for row in rows:
+            item = dict(row)
+            try:
+                item["selected_document_ids"] = json.loads(item["selected_document_ids"] or "[]")
+            except Exception:
+                item["selected_document_ids"] = []
+            results.append(item)
+        return results
 
     @staticmethod
     def get(conv_id: str) -> Optional[Dict[str, Any]]:

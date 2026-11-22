@@ -9,6 +9,7 @@ from app.services.graph_engine import OKFGraphEngine
 from app.services.gemma_client import GemmaClient
 from app.services.retrieval_service import RetrievalService
 from app.database.repository import MessageRepository, ConversationRepository, DocumentRepository
+from app.services.issue_service import IssueService
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,8 @@ class ChatService:
             status="completed"
         )
 
-        # 7. Emit done event
+        # 7. Update the notebook's traceable issue register, then finish.
+        IssueService.capture_from_chat(conversation_id, message, accumulated_text, assistant_msg_id)
         yield f"event: done\ndata: {json.dumps({'message_id': assistant_msg_id, 'finish_reason': 'stop'})}\n\n"
 
     def _audit_citations(self, text: str) -> List[Dict[str, Any]]:

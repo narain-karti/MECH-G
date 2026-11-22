@@ -36,12 +36,14 @@ async def create_conversation(req: ConversationCreate):
     """Creates a new conversational workspace session."""
     conv = ConversationRepository.create(
         title=req.title or "New Conversation",
-        selected_doc_ids=req.selected_document_ids
+        selected_doc_ids=req.selected_document_ids,
+        notebook_id=req.notebook_id,
     )
     return ConversationResponse(
         id=conv["id"],
         title=conv["title"],
         selected_document_ids=conv.get("selected_document_ids") or [],
+        notebook_id=conv.get("notebook_id"),
         created_at=str(conv.get("created_at") or ""),
         updated_at=str(conv.get("updated_at") or ""),
         messages=[]
@@ -57,6 +59,7 @@ async def list_conversations():
             id=c["id"],
             title=c["title"],
             selected_document_ids=c.get("selected_document_ids") or [],
+            notebook_id=c.get("notebook_id"),
             created_at=str(c.get("created_at") or ""),
             updated_at=str(c.get("updated_at") or "")
         )
@@ -90,6 +93,7 @@ async def get_conversation(conversation_id: str):
         id=conv["id"],
         title=conv["title"],
         selected_document_ids=conv.get("selected_document_ids") or [],
+        notebook_id=conv.get("notebook_id"),
         created_at=str(conv.get("created_at") or ""),
         updated_at=str(conv.get("updated_at") or ""),
         messages=messages

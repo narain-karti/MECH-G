@@ -32,6 +32,7 @@ class ChatMessageResponse(BaseModel):
 class ConversationCreate(BaseModel):
     title: Optional[str] = "New Conversation"
     selected_document_ids: Optional[List[str]] = Field(default_factory=list)
+    notebook_id: Optional[str] = None
 
 
 class ConversationUpdate(BaseModel):
@@ -43,6 +44,7 @@ class ConversationResponse(BaseModel):
     id: str
     title: str
     selected_document_ids: List[str] = Field(default_factory=list)
+    notebook_id: Optional[str] = None
     created_at: str
     updated_at: str
     messages: Optional[List[ChatMessageResponse]] = None

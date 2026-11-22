@@ -6,6 +6,8 @@ import { TourProvider } from "./context/TourContext";
 import { TourOverlay } from "./components/tour/TourOverlay";
 import { Toaster } from "./components/ui/toast-stack";
 import { GlobalCommandPalette } from "./components/navigation/GlobalCommandPalette";
+import { LandingPage } from "./pages/LandingPage";
+import { NotebookGalleryPage } from "./pages/NotebookGalleryPage";
 import { WorkspacePage } from "./pages/WorkspacePage";
 import { DiagnosticPage } from "./pages/DiagnosticPage";
 import { GraphPage } from "./pages/GraphPage";
@@ -33,16 +35,22 @@ export default function App() {
           <Toaster position="bottom-right" />
           <ScrollToTopOnNavigate />
           <Routes>
-            {/* Primary AI Knowledge Workspace (NotebookLM 3-Panel Experience) */}
-            <Route path="/" element={<WorkspacePage />} />
-            <Route path="/workspace" element={<WorkspacePage />} />
+            {/* 1. Marketing & Technical Showcase Editorial Landing Page */}
+            <Route path="/" element={<LandingPage />} />
 
-            {/* Dedicated Modern MECH-G Industrial Engineering Pages */}
+            {/* 2. Industrial Equipment Notebook Gallery */}
+            <Route path="/notebooks" element={<NotebookGalleryPage />} />
+
+            {/* 3. Unified Machine Workspace (Grounded Consultation, Schematics & Defect Register) */}
+            <Route path="/notebook/:notebookId" element={<WorkspacePage />} />
+            <Route path="/workspace" element={<Navigate to="/notebook/nb-vestas-v112" replace />} />
+
+            {/* 4. Multimodal Field Diagnostics & Specialized Surfaces */}
             <Route path="/diagnostics" element={<DiagnosticPage />} />
             <Route path="/diagnose" element={<DiagnosticPage />} />
             <Route path="/graph" element={<GraphPage />} />
-            <Route path="/ingest" element={<IngestPage />} />
             <Route path="/safety" element={<SafetyCompliancePage />} />
+            <Route path="/ingest" element={<IngestPage />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

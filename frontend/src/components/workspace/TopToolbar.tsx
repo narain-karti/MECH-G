@@ -14,7 +14,10 @@ import {
   HelpCircle,
   Bell,
   X,
-  ListCheck
+  ListCheck,
+  FolderKanban,
+  Home,
+  Cpu,
 } from "lucide-react";
 import { useTour } from "../../context/TourContext";
 import { LiquidTabs, LiquidTab } from "../ui/liquid-tabs";
@@ -24,15 +27,19 @@ import { OnboardingChecklist, OnboardingTask } from "../ui/onboarding-checklist"
 
 interface TopToolbarProps {
   title?: string;
+  notebookModel?: string;
   sourceCount?: number;
   onNewChat?: () => void;
-  activeModule?: "workspace" | "diagnostics" | "graph" | "safety" | "ingest";
+  activeModule?: "home" | "notebooks" | "workspace" | "diagnostics" | "graph" | "safety" | "ingest";
+  onOpenUpload?: () => void;
 }
 
 export const TopToolbar: React.FC<TopToolbarProps> = ({
   title = "MECH-G Master Documentation",
+  notebookModel,
   onNewChat,
   activeModule: propActiveModule,
+  onOpenUpload,
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -46,7 +53,11 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
   // Automatically detect active module if not explicitly provided
   const activeModule =
     propActiveModule ||
-    (location.pathname.startsWith("/diagnostic")
+    (location.pathname === "/"
+      ? "home"
+      : location.pathname.startsWith("/notebooks")
+      ? "notebooks"
+      : location.pathname.startsWith("/diagnostic")
       ? "diagnostics"
       : location.pathname.startsWith("/graph")
       ? "graph"
@@ -88,7 +99,7 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
       done: true,
       action: {
         label: "Open Workspace",
-        onClick: () => navigate("/workspace"),
+        onClick: () => navigate("/notebooks"),
       },
     },
     {
@@ -131,60 +142,64 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
 
   const navTabs: LiquidTab[] = [
     {
+      value: "home",
+      label: "Home",
+      icon: <Home className="w-3.5 h-3.5 text-[#22D3EE]" />,
+    },
+    {
+      value: "notebooks",
+      label: "Equipment",
+      icon: <FolderKanban className="w-3.5 h-3.5 text-cyan-400" />,
+    },
+    {
       value: "workspace",
-      label: "Workspace",
+      label: "Machine Chat",
       icon: <Sparkles className="w-3.5 h-3.5 text-[#22D3EE]" />,
     },
     {
       value: "diagnostics",
-      label: "Diagnostics",
+      label: "Field Diagnostic",
       icon: <Wrench className="w-3.5 h-3.5 text-[#FBBF24]" />,
-    },
-    {
-      value: "graph",
-      label: "Graph",
-      icon: <Layers className="w-3.5 h-3.5 text-[#8B5CF6]" />,
-    },
-    {
-      value: "safety",
-      label: "Safety",
-      icon: <ShieldAlert className="w-3.5 h-3.5 text-[#FB7185]" />,
-    },
-    {
-      value: "ingest",
-      label: "Ingest",
-      icon: <UploadCloud className="w-3.5 h-3.5 text-[#34D399]" />,
     },
   ];
 
   return (
     <header className="h-[52px] bg-[#0B0B0C] px-4 flex items-center justify-between z-20 select-none border-b border-[#18181A]">
-      {/* Left: Brand Icon & Master Documentation Title */}
+      {/* Left: Brand Icon & Breadcrumb Context */}
       <div className="flex items-center gap-3">
-        <Link to="/workspace" className="flex items-center gap-2.5 group">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#3B82F6] via-[#22D3EE] to-[#8B5CF6] p-0.5 flex items-center justify-center shadow-lg shadow-cyan-500/10">
-            <div className="w-full h-full bg-[#0B0B0C] rounded-full flex items-center justify-center group-hover:bg-[#141720] transition-colors">
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-[#3B82F6] via-[#22D3EE] to-[#8B5CF6] p-0.5 flex items-center justify-center shadow-lg shadow-cyan-500/10">
+            <div className="w-full h-full bg-[#0B0B0C] rounded-lg flex items-center justify-center group-hover:bg-[#141720] transition-colors">
               <span className="text-[11px] font-black tracking-tighter text-[#22D3EE]">M</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <h1 className="text-[14px] font-semibold text-white tracking-tight hover:text-[#22D3EE] transition-colors">
+            <span className="font-bold text-sm tracking-wider text-white hidden sm:inline">
+              MECH-G
+            </span>
+            <span className="text-xs text-[#71717A] hidden sm:inline">/</span>
+            <h1 className="text-xs sm:text-sm font-semibold text-white tracking-tight hover:text-[#22D3EE] transition-colors max-w-[220px] sm:max-w-xs truncate">
               {title}
             </h1>
-            <Badge tone="cyan" variant="subtle" size="sm" className="font-mono">
-              MECH-G
-            </Badge>
+            {notebookModel && (
+              <Badge tone="cyan" variant="subtle" size="sm" className="font-mono text-[10px]">
+                {notebookModel}
+              </Badge>
+            )}
           </div>
         </Link>
       </div>
 
       {/* Center: LiquidTabs Navigation */}
-      <div className="hidden md:flex items-center">
+      <div className="hidden lg:flex items-center">
         <LiquidTabs
           label="MECH-G Navigation"
           value={activeModule}
           onValueChange={(val) => {
-            navigate(val === "workspace" ? "/workspace" : `/${val}`);
+            if (val === "home") navigate("/");
+            else if (val === "notebooks") navigate("/notebooks");
+            else if (val === "workspace") navigate("/notebook/nb-vestas-v112");
+            else navigate(`/${val}`);
           }}
           tabs={navTabs}
           size="sm"
@@ -193,13 +208,13 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center gap-2">
-        {/* Switch Views Dropdown for Mobile / Compact Screens */}
-        <div className="relative md:hidden">
+        {/* Quick Nav Dropdown for Mobile */}
+        <div className="relative lg:hidden">
           <button
             onClick={() => setShowNavMenu(!showNavMenu)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-[#9CA3AF] hover:text-white hover:bg-[#1E1F24] transition-colors border border-[#27272A]"
           >
-            <span>Modules</span>
+            <span>Nav</span>
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
 
@@ -209,7 +224,10 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
                 <button
                   key={tab.value}
                   onClick={() => {
-                    navigate(tab.value === "workspace" ? "/workspace" : `/${tab.value}`);
+                    if (tab.value === "home") navigate("/");
+                    else if (tab.value === "notebooks") navigate("/notebooks");
+                    else if (tab.value === "workspace") navigate("/notebook/nb-vestas-v112");
+                    else navigate(`/${tab.value}`);
                     setShowNavMenu(false);
                   }}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors text-left ${
@@ -223,6 +241,18 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
             </div>
           )}
         </div>
+
+        {/* Upload Manual CTA if in workspace */}
+        {onOpenUpload && (
+          <button
+            onClick={onOpenUpload}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-normal text-[#22D3EE] hover:text-white bg-[#22D3EE]/10 hover:bg-[#22D3EE]/20 border border-[#22D3EE]/30 transition-all cursor-pointer"
+            title="Upload Manual / PDF to this machine"
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            <span>Upload Manual</span>
+          </button>
+        )}
 
         {/* Onboarding Checklist Button */}
         <button
@@ -318,91 +348,57 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
         </div>
 
         {/* Settings */}
-        <button
-          onClick={() => setShowSettings(!showSettings)}
-          className="p-2 rounded-full text-[#9CA3AF] hover:text-white hover:bg-[#1E1F24] transition-colors border border-transparent hover:border-[#27272A] cursor-pointer"
-          title="MECH-G System Settings"
-        >
-          <SettingsIcon className="w-4 h-4" />
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="p-2 text-[#9CA3AF] hover:text-white hover:bg-[#1E1F24] rounded-full transition-colors cursor-pointer"
+            title="System Settings"
+          >
+            <SettingsIcon className="w-4 h-4" />
+          </button>
 
-        {/* MECH-G Avatar */}
-        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#3B82F6] to-[#8B5CF6] flex items-center justify-center text-xs font-bold text-white shadow-sm ml-1">
-          M
+          {showSettings && (
+            <div className="absolute right-0 mt-2 w-64 bg-[#18181A] border border-[#27272A] rounded-2xl p-4 shadow-2xl z-50 animate-in fade-in space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#27272A]">
+                <span className="text-xs font-bold text-white">System Runtime</span>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="text-[#9CA3AF] hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#9CA3AF]">Edge Model</span>
+                  <span className="text-white font-mono text-[11px]">Gemma 4 (26B)</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#9CA3AF]">Graph Mode</span>
+                  <span className="text-cyan-400 font-mono text-[11px]">In-Memory AST</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#9CA3AF]">OSHA Interlock</span>
+                  <span className="text-emerald-400 font-mono text-[11px]">Enforced</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Onboarding Checklist Modal */}
-      {showChecklist && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#18181A] border border-[#27272A] rounded-[24px] p-6 shadow-2xl relative">
-            <button
-              onClick={() => setShowChecklist(false)}
-              className="absolute top-5 right-5 text-[#9CA3AF] hover:text-white p-1 rounded cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <OnboardingChecklist
-              title="MECH-G Field Engineering Checklist"
-              tasks={onboardingTasks}
-              onTaskComplete={(id) => {
-                setOnboardingTasks((prev) =>
-                  prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
-                );
-              }}
-              onDismiss={() => setShowChecklist(false)}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Settings Modal */}
-      {showSettings && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#18181A] border border-[#27272A] rounded-[24px] p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#22D3EE]" />
-                MECH-G Workspace Configuration
-              </h3>
-              <span className="text-[10px] font-mono text-[#9CA3AF] bg-[#232326] px-2 py-0.5 rounded">
-                v2.4
-              </span>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block text-[#9CA3AF] mb-1 font-medium">Active Multimodal Model</label>
-                <div className="text-white font-mono bg-[#1E1F23] border border-[#2E3036] rounded-xl px-3 py-2">
-                  gemma-4-26b-a4b-it (Official Google Gemma 4 Multimodal)
-                </div>
-              </div>
-              <div>
-                <label className="block text-[#9CA3AF] mb-1 font-medium">Knowledge Graph Engine</label>
-                <div className="text-white font-mono bg-[#1E1F23] border border-[#2E3036] rounded-xl px-3 py-2">
-                  NetworkX Directed Graph + SQLite Provenance
-                </div>
-              </div>
-              <div>
-                <label className="block text-[#9CA3AF] mb-1 font-medium">Safety Interlock Standards</label>
-                <div className="text-white font-mono bg-[#1E1F23] border border-[#2E3036] rounded-xl px-3 py-2">
-                  OSHA 1910.147 LOTO + Zero-Energy Verification Gate
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowSettings(false)}
-                className="px-4 py-1.5 rounded-full bg-[#232326] hover:bg-[#2A2A2F] text-white text-xs font-medium border border-[#2E2E33] transition-colors cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <OnboardingChecklist
+        isOpen={showChecklist}
+        onClose={() => setShowChecklist(false)}
+        tasks={onboardingTasks}
+        onToggleTask={(id) => {
+          setOnboardingTasks((prev) =>
+            prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
+          );
+        }}
+      />
     </header>
   );
 };
