@@ -1,0 +1,16 @@
+{
+  "title": "MECH-G: Critical Threshold",
+  "style": "visual-investigation",
+  "dur": 48.0,
+  "fps": 24,
+  "sections": {
+    "s01": [0.0, 8.0],
+    "s02": [8.0, 15.5],
+    "s03": [15.5, 22.0],
+    "s04": [22.0, 28.0],
+    "s05": [28.0, 34.0],
+    "s06": [34.0, 40.0],
+    "s07": [40.0, 48.0]
+  },
+  "subtitles": "subtitles_en.srt"
+}

@@ -1,0 +1,27 @@
+1
+00:00:00,800 --> 00:00:06,000
+[TECH ECHO-7] Mayday base! Hydraulic manifold ruptured at 210 bar! Nacelle pressure collapsing!
+
+2
+00:00:08,800 --> 00:00:14,800
+[TECH ECHO-7] Cloud RAG timed out! 504 Gateway Error! The pitch cylinder is slipping!
+
+3
+00:00:16,200 --> 00:00:21,800
+[MECH-G CORE] Echo-Seven, this is MECH-G local core. Visual acquisition engaged. I have your back.
+
+4
+00:00:22,500 --> 00:00:27,200
+[TECH ECHO-7] Confirmed PRV-992-B! Clamping OSHA lock on safety gate now!
+
+5
+00:00:28,500 --> 00:00:33,800
+[MECH-G CORE] Zero energy verified. Execute three-pass torque to 35 Newton-meters.
+
+6
+00:00:34,500 --> 00:00:39,800
+[TECH ECHO-7] Click! Click! 35 Nm confirmed! Manifold sealed! We saved the turbine!
+
+7
+00:00:40,800 --> 00:00:47,000
+[MECH-G CORE] 84% downtime reduced. Fully offline. When seconds count, trust MECH-G.

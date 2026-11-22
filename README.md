@@ -18,53 +18,65 @@
 
 ---
 
-## 🎬 Official Pitch Video & Walkthrough Showcase: "MECH-G to the Rescue!"
+## 🎬 Official Pitch Video & Walkthrough Showcase: "MECH-G: Critical Threshold"
 
-The repository includes a complete broadcast-grade animated story pitch video produced and directed using the **`lemo-opuscar`** algorithmic film engine in the **Mid-century Cartoon** (`midcentury-toon`) aesthetic. It features **bright, rich 1950s hand-registered printed cels on warm cream paper**, the adorable **MECH-G Mascot**, **ElevenLabs studio neural narration (Adam)**, a swinging **120.0 BPM West Coast cool-jazz score**, and **procedural cartoon sound design (SFX)**.
+The repository includes a broadcast-grade cinematic film produced and directed using the **`lemo-opuscar`** algorithmic film engine in the **Visual Investigation** (`visual-investigation`) aesthetic. It captures a real-time offshore wind turbine emergency in the North Sea during a 50-knot gale, featuring high/low-pitch voice contrast via **ElevenLabs dual-voice neural synthesis**, our **friendly, funny, cute MECH-G mascot avatar**, photorealistic macro evidence photography, and heavy tactical thriller sound design.
 
 ▶️ **Watch Pitch Video File**: [`video/mech_g_pitch.mp4`](./video/mech_g_pitch.mp4)  
 🖼️ **High-Resolution Poster**: [`video/poster.jpg`](./video/poster.jpg)  
-📝 **Lemo-Opuscar Story Treatment**: [`video/lemo_story/TREATMENT.md`](./video/lemo_story/TREATMENT.md)  
-📜 **Film Credits & Attributions**: [`video/lemo_story/CREDITS.md`](./video/lemo_story/CREDITS.md)  
+📝 **Lemo-Opuscar Cinema Treatment**: [`video/lemo_cinema/TREATMENT.md`](./video/lemo_cinema/TREATMENT.md)  
+📜 **Film Credits & Attributions**: [`video/lemo_cinema/CREDITS.md`](./video/lemo_cinema/CREDITS.md)  
 💬 **Subtitles (SRT)**: [`video/mech_g_pitch.srt`](./video/mech_g_pitch.srt)
 
 ```
-[0:00 - 0:08] SCENE 1: THE FRONTLINE TECH STORE
-  • A stressed field mechanic rushes into the bright Frontline Depot holding hydraulic valve PRV-992-B shaking under 210 bar pressure with hissing steam clouds.
-  • Voiceover: "Welcome to the Frontline Depot! When critical machines blow a seal in the field, every second counts."
+[0:00 - 0:08] SHOT 1: INCIDENT OUTBREAK & MANIFOLD RUPTURE
+  • Mission clock: 14:22:05 UTC, Altitude 102m MSL in 52-knot gale storm.
+  • Distressed field engineer Alexander Vane reports catastrophic hydraulic blowout on valve PRV-992-B under 210 bar pressure.
+  • Voice (Tech - Urgent High-Pitch Radio): "Mayday base! Hydraulic manifold ruptured at two-ten bar! Nacelle pressure collapsing!"
 
-[0:08 - 0:16] SCENE 2: CLOUD AI CRASH & MANUAL AVALANCHE
-  • Cloud tablet explodes into a red HTTP 504: NO SIGNAL! storm cloud. A colossal 4,000-page paper manual avalanches down onto the workbench with a cartoon slide whistle.
-  • Voiceover: "Cloud chatbots choke with zero signal, leaving engineers stranded with massive four-thousand-page manuals."
+[0:08 - 0:15] SHOT 2: CLOUD 504 TIMEOUT & ESCALATING DOWNTIME
+  • Downlink drops to 0 kbps. Cloud RAG assistant crashes with HTTP 504 GATEWAY TIMEOUT.
+  • Turbine pitch cylinder slips by -14.2°. Downtime ticker surges past $28,900 USD.
+  • Voice (Tech - Urgent High-Pitch Radio): "Cloud RAG timed out! Five-zero-four gateway error! The pitch cylinder is slipping!"
 
-[0:16 - 0:22] SCENE 3: ENTER MECH-G THE MASCOT!
-  • Starburst fanfare! MECH-G—the adorable purple-and-cyan edge-AI companion with yellow engineer hard hat and four-finger white gloves—bounces in with squash & stretch!
-  • Voiceover: "Meet MECH-G! Your offline AI companion for mission-critical machine repair."
+[0:15 - 0:22] SHOT 3: FRIENDLY MASCOT / MECH-G EDGE CORE ACTIVATION
+  • Heavy 35 Hz cinematic sub-bass braam! The adorable, fluffy purple MECH-G mascot appears holding the glowing diagnostics tablet ("STATUS: AWESOME!").
+  • Local edge graph loads in 480 ms with 0 cloud packets required.
+  • Voice (MECH-G - Deep Bass Baritone): "Echo-Seven, this is MECH-G local core. Visual acquisition engaged. I have your back."
 
-[0:22 - 0:38] SCENES 4-6: THE 3-STEP MNEMONIC (SNAP • LOCK • FIX)
-  • Step 1: SNAP! Mascot aims optical scanner; a bright cyan HUD cone locks onto valve PRV-992-B (96% confidence) and highlights the leaking Viton seal.
-  • Step 2: LOCK! Mascot clamps a heavy red OSHA 1910.147 padlock onto the valve lever; pressure drops from 210 bar to 0 PSI with a green "ZERO ENERGY VERIFIED" starburst.
-  • Step 3: FIX & VERIFY! Mascot turns calibrated torque wrench (15 → 25 → 35 Nm) with crisp ratchets, backed by local deterministic knowledge graph citations.
-  • Voiceover: "Step one: Snap! Multimodal vision instantly identifies valve PRV-992-B and flags the leaking seal. Step two: Lock! OSHA safety gates enforce zero-energy isolation before anyone touches a bolt. Step three: Fix and verify! Calibrated thirty-five newton-meter torque sequence, verified by our local graph."
+[0:22 - 0:28] SHOT 4: TARGET ACQUISITION & OSHA LOTO LOCKOUT
+  • Multimodal vision reticle locks onto valve PRV-992-B (98.4% match).
+  • Heavy mechanical OSHA 1910.147 safety padlock snaps onto the energy isolation lever.
+  • Voice (Tech - High-Pitch Radio): "Confirmed PRV-992-B! Clamping OSHA lock on safety gate now!"
 
-[0:38 - 0:48] SCENE 7: CELEBRATION, METRIC SLAM & FINALE
-  • Valve hums smoothly with green ripples; confetti showers down; technician and mascot jump with double thumbs-up!
-  • Three huge starburst medallions slam into view: 84% FASTER MTTR • < 500 ms GRAPH LATENCY • 100% OFFLINE EDGE AI!
-  • Voiceover: "Eighty-four percent faster repairs, completely offline. MECH-G: The frontline engineer's best friend!"
+[0:28 - 0:34] SHOT 5: ZERO ENERGY & 3-PASS TORQUE PROCEDURE
+  • Accumulator drops from 210 bar to 0 PSI [SAFE].
+  • MECH-G mascot displays OEM SOP-WTG-HYD-044 star-pattern torque specification.
+  • Voice (MECH-G - Deep Bass Baritone): "Zero energy verified. Execute three-pass torque to thirty-five Newton meters."
+
+[0:34 - 0:40] SHOT 6: DIGITAL TORQUE EXECUTION & TURBINE SECURED
+  • Digital torque wrench ratchets with calibrated clicks: 15 Nm → 25 Nm → 35.0 Nm [PASS] with dual green LEDs.
+  • Manifold pressure stabilizes to 160 bar; blade pitch angle feathers to safety.
+  • Voice (Tech - Triumphant Relief): "Click! Click! Thirty-five Nm confirmed! Manifold sealed! We saved the turbine!"
+
+[0:40 - 0:48] SHOT 7: FORENSIC VERDICT & MASTER MECH-G LOCKUP
+  • High-impact kinetic metric slam: 84% MTTR REDUCTION • < 500 ms GRAPH QUERY • 100% OFFLINE RESILIENCE.
+  • Final brand lockup with cute mascot: "MISSION-CRITICAL EDGE INTELLIGENCE FOR UNFORGIVING MACHINES".
+  • Voice (MECH-G - Deep Bass Baritone): "Eighty-four percent downtime reduced. Fully offline. When seconds count, trust MECH-G."
 ```
 
-### 🔊 Audio Engineering & Cool-Jazz Score Architecture
+### 🔊 Cinema Audio & Vocal Pitch Architecture
 
-1. **ElevenLabs Studio Narration (Voice: Adam)**:
-   - Synthesized using ElevenLabs **Multilingual v2** (`eleven_multilingual_v2`) with the **Adam** voice (`pNInz6obpgDQGcFmaJgB`).
-   - Friendly, warm, technical, and unhurried storyteller delivery.
-2. **120.0 BPM West Coast Cool-Jazz Score**:
-   - Synthesized in F major modulating to G major for the finale: walking pizzicato double bass, brushed snare & ride cymbals, vibraphone melody leads, and celesta glockenspiel chimes.
-   - 120.0 BPM (0.500s / 12 frames per beat at 24 fps CFR) provides sample-accurate mathematical alignment on every cartoon cut, pop-in, and tool action.
-3. **Procedural Cartoon Foley Suite**:
-   - Filtered noise steam hisses, cartoon bitcrush cloud zap, slide whistles, heavy cardboard book slaps, camera shutter clicks, metallic solenoid padlock clamps, calibrated torque pawl clicks, and celebration chimes.
-4. **Master Broadcast Sidechain Mix**:
-   - Dynamic ducking (-8 dB score ducking during speech), peak normalized to -1.5 dBFS, faststart MP4 container.
+1. **High-Pitch / Urgent Field Radio (Technician Alex)**:
+   - Voice: **Laura** (`FGY2WhTYpPnrIDTdsKH5`), high-register, rapid emergency cadence.
+   - Tactical 300–3,400 Hz bandpass filtering, harmonic saturation, and authentic aviation mic click/squelch tones.
+2. **Low-Pitch / Deep Bass Baritone (MECH-G Mascot / AI Command)**:
+   - Voice: **Brian** (`nPczCjzI2devNBz1zQrb`), deep resonant authoritative baritone.
+   - Enhanced with 80–120 Hz sub-harmonic warmth and crisp presence. The delightful contrast between the cute, fuzzy mascot and this deep, reassuring movie-trailer voice brings immense charm and memorability!
+3. **Procedural Cinema Foley Suite**:
+   - 35 Hz cinematic analog sub-bass braams, 880 Hz industrial double-beep warning alarms, high-pressure hydraulic rupture spray, heavy mechanical padlock snap, calibrated 15/25/35 Nm torque clicks, and dual-tone digital calibration chime (1,760 Hz → 2,637 Hz).
+4. **Master Broadcast Mix**:
+   - 120.0 BPM analog tension pulse & brass crescendo, dynamic sidechain ducking (-8 dB BGM during dialogue), master peak limited to -2.50 dBFS, 48.000s duration.
 
 ---
 

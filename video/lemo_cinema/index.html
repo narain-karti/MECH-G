@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MECH-G: Critical Threshold · Visual Investigation</title>
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0B0C0E;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+canvas {
+  display: block;
+  width: 1920px;
+  height: 1080px;
+}
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+// ── Visual Investigation Canvas Engine ──
+const W = 1920, H = 1080;
+const cv = document.getElementById('c');
+const x = cv.getContext('2d');
+
+window.DUR = 48.0;
+
+// Color Palette (Visual Investigation Standard)
+const C = {
+  bg: '#0B0C0E',
+  panel: '#141619',
+  panelDark: '#0D0F11',
+  line: '#2E3238',
+  lineDim: '#1D2024',
+  text: '#ECEAE4',
+  dim: '#8B9097',
+  faint: '#4A4F57',
+  red: '#FF4A2E',
+  green: '#10B981',
+  cyan: '#06B6D4',
+  amber: '#F59E0B'
+};
+
+const F = {
+  sans: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  mono: '"Courier New", Courier, monospace'
+};
+
+// Math & Easing Helpers
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = k => 1 - Math.pow(1 - k, 3);
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// Image Assets
+const IM = {};
+function loadImage(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      console.warn('Failed to load image:', src);
+      resolve(null);
+    };
+    img.src = src;
+  });
+}
+
+// Subtitles mapping
+const SUBS = [
+  { s: 0.8, e: 6.0, who: 'TECH ECHO-7', c: C.amber, text: 'Mayday base! Hydraulic manifold ruptured at 210 bar! Nacelle pressure collapsing!' },
+  { s: 8.8, e: 14.8, who: 'TECH ECHO-7', c: C.amber, text: 'Cloud RAG timed out! 504 Gateway Error! The pitch cylinder is slipping!' },
+  { s: 16.2, e: 21.8, who: 'MECH-G CORE', c: C.cyan, text: 'Echo-Seven, this is MECH-G local core. Visual acquisition engaged. I have your back.' },
+  { s: 22.5, e: 27.2, who: 'TECH ECHO-7', c: C.amber, text: 'Confirmed PRV-992-B! Clamping OSHA lock on safety gate now!' },
+  { s: 28.5, e: 33.8, who: 'MECH-G CORE', c: C.cyan, text: 'Zero energy verified. Execute three-pass torque to 35 Newton-meters.' },
+  { s: 34.5, e: 39.8, who: 'TECH ECHO-7', c: C.amber, text: 'Click! Click! 35 Nm confirmed! Manifold sealed! We saved the turbine!' },
+  { s: 40.8, e: 47.0, who: 'MECH-G CORE', c: C.cyan, text: '84% downtime reduced. Fully offline. When seconds count, trust MECH-G.' }
+];
+
+async function boot() {
+  const assets = {
+    mascot: 'assets/avatar_mascot_friendly.jpg',
+    tech: 'assets/avatar_technician.jpg',
+    rupture: 'assets/asset_valve_rupture.jpg',
+    lock: 'assets/asset_lock_torque.jpg'
+  };
+
+  const loads = Object.entries(assets).map(([k, path]) => 
+    loadImage(path).then(img => { IM[k] = img; })
+  );
+
+  await Promise.all(loads);
+  window.READY = true;
+  console.log('[LEMO-CINEMA] Loaded assets. Ready to render.');
+}
+
+// ── Drawing Utilities ──
+function fill(X, Y, w, h, col) {
+  x.fillStyle = col;
+  x.fillRect(X, Y, w, h);
+}
+
+function strokeRect(X, Y, w, h, col = C.line, lw = 1, dash = null) {
+  x.save();
+  x.strokeStyle = col;
+  x.lineWidth = lw;
+  if (dash) x.setLineDash(dash);
+  x.strokeRect(X + 0.5, Y + 0.5, w - 1, h - 1);
+  x.restore();
+}
+
+function hair(x0, y0, x1, y1, col = C.line, lw = 1, dash = null) {
+  x.save();
+  x.strokeStyle = col;
+  x.lineWidth = lw;
+  if (dash) x.setLineDash(dash);
+  x.beginPath();
+  x.moveTo(x0, y0);
+  x.lineTo(x1, y1);
+  x.stroke();
+  x.restore();
+}
+
+function txt(s, X, Y, o = {}) {
+  x.save();
+  x.font = `${o.w || '400'} ${o.s || 20}px ${o.f || F.sans}`;
+  x.fillStyle = o.c || C.text;
+  x.textAlign = o.al || 'left';
+  x.textBaseline = o.bl || 'alphabetic';
+  if (o.a !== undefined) x.globalAlpha *= o.a;
+  x.fillText(s, X, Y);
+  const width = x.measureText(s).width;
+  x.restore();
+  return width;
+}
+
+function coverImage(img, X, Y, w, h, opt = {}) {
+  if (!img) {
+    fill(X, Y, w, h, '#000');
+    return;
+  }
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  let sw = iw, sh = iw * h / w;
+  if (sh > ih) {
+    sh = ih;
+    sw = ih * w / h;
+  }
+  const fx = opt.fx !== undefined ? opt.fx : 0.5;
+  const fy = opt.fy !== undefined ? opt.fy : 0.5;
+  const sx = (iw - sw) * fx;
+  const sy = (ih - sh) * fy;
+
+  x.save();
+  if (opt.a !== undefined) x.globalAlpha *= opt.a;
+  if (opt.filter) x.filter = opt.filter;
+  x.drawImage(img, sx, sy, sw, sh, X, Y, w, h);
+  x.restore();
+
+  if (!opt.noBorder) strokeRect(X, Y, w, h, opt.border || C.line, 1);
+}
+
+// Forensic Source Tag
+function drawTag(label, X, Y, col = C.red) {
+  fill(X, Y - 12, 4, 14, col);
+  txt(label, X + 10, Y, { s: 13, f: F.mono, c: C.dim, w: 'bold' });
+}
+
+// Ring Callout
+function drawRing(cx, cy, r, progress, label, side = 1, col = C.red) {
+  if (progress <= 0) return;
+  x.save();
+  x.strokeStyle = col;
+  x.lineWidth = 2.5;
+  x.beginPath();
+  x.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * eo(progress));
+  x.stroke();
+  x.restore();
+
+  if (label && progress > 0.6) {
+    const a = seg(progress, 0.6, 0.85);
+    const lx = cx + side * (r * 0.72);
+    const ly = cy - r * 0.72;
+    const ex = lx + side * 45;
+    const ey = ly - 25;
+    x.save();
+    x.globalAlpha *= a;
+    hair(lx, ly, ex, ey, col, 1.5);
+    hair(ex, ey, ex + side * 20, ey, col, 1.5);
+    txt(label, ex + side * 28, ey + 5, { s: 16, f: F.sans, c: col, w: '700', al: side > 0 ? 'left' : 'right' });
+    x.restore();
+  }
+}
+
+// Waveform display
+function drawWaveform(X, Y, w, h, t, active = true, col = C.amber) {
+  strokeRect(X, Y, w, h, C.lineDim, 1);
+  fill(X, Y, w, h, '#0E1012');
+  if (!active) {
+    hair(X + 10, Y + h / 2, X + w - 10, Y + h / 2, C.lineDim, 1);
+    return;
+  }
+  const midY = Y + h / 2;
+  const bars = 48;
+  const bw = (w - 20) / bars;
+  x.save();
+  for (let i = 0; i < bars; i++) {
+    const bx = X + 10 + i * bw;
+    const v = Math.abs(Math.sin((i * 0.4) + t * 14.0) * Math.cos((i * 0.15) - t * 8.0));
+    const bh = Math.max(3, v * (h * 0.75));
+    fill(bx, midY - bh / 2, bw - 2, bh, col);
+  }
+  x.restore();
+}
+
+// Subtitles renderer
+function drawSubtitles(t) {
+  const cur = SUBS.find(s => t >= s.s && t <= s.e);
+  if (!cur) return;
+
+  const barY = 960;
+  const barH = 75;
+  const barW = 1600;
+  const barX = (W - barW) / 2;
+
+  fill(barX, barY, barW, barH, 'rgba(11, 12, 14, 0.88)');
+  strokeRect(barX, barY, barW, barH, C.line, 1);
+  fill(barX, barY, 6, barH, cur.c);
+
+  txt(cur.who, barX + 24, barY + 28, { s: 14, f: F.mono, c: cur.c, w: 'bold' });
+  txt(cur.text, barX + 24, barY + 56, { s: 20, f: F.sans, c: C.text, w: '600' });
+}
+
+// Top Mission Clock & Incident Header
+function drawTopHeader(t) {
+  fill(0, 0, W, 48, C.panelDark);
+  hair(0, 48, W, 48, C.line, 1);
+
+  // Timecode
+  const baseSec = 5 + Math.floor(t);
+  const frac = Math.floor((t % 1) * 100);
+  const tc = `14:22:${String(baseSec).padStart(2, '0')}.${String(frac).padStart(2, '0')} UTC`;
+  txt(tc, 60, 32, { s: 18, f: F.mono, c: C.text, w: 'bold' });
+
+  // Location / Turbine telemetry
+  drawTag('INCIDENT SITE', 380, 30, C.red);
+  txt('OFFSHORE WTG-09B · NACELLE HYDRAULICS', 500, 31, { s: 14, f: F.mono, c: C.dim });
+
+  drawTag('ALTITUDE', 900, 30, C.dim);
+  txt('102m MSL', 980, 31, { s: 14, f: F.mono, c: C.dim });
+
+  drawTag('WIND', 1140, 30, C.amber);
+  txt('52 KNOTS GALE', 1200, 31, { s: 14, f: F.mono, c: C.amber });
+
+  drawTag('STATUS', 1480, 30, t < 38.0 ? C.red : C.green);
+  txt(t < 38.0 ? 'CRITICAL FAILURE' : 'SYSTEM SECURED', 1550, 31, {
+    s: 14,
+    f: F.mono,
+    c: t < 38.0 ? C.red : C.green,
+    w: 'bold'
+  });
+}
+
+// ── Master Render Function ──
+window.render = function(t) {
+  fill(0, 0, W, H, C.bg);
+  drawTopHeader(t);
+
+  // Scene Routing
+  if (t < 8.0) {
+    renderScene01(t);
+  } else if (t < 15.5) {
+    renderScene02(t);
+  } else if (t < 22.0) {
+    renderScene03(t);
+  } else if (t < 28.0) {
+    renderScene04(t);
+  } else if (t < 34.0) {
+    renderScene05(t);
+  } else if (t < 40.0) {
+    renderScene06(t);
+  } else {
+    renderScene07(t);
+  }
+
+  drawSubtitles(t);
+};
+
+// ── Shot S01: Incident Outbreak & Manifold Rupture (0.0s - 8.0s) ──
+function renderScene01(t) {
+  // Left: Field Technician in storm
+  const pan1X = 60, pan1Y = 70, pan1W = 860, pan1H = 620;
+  coverImage(IM.tech, pan1X, pan1Y, pan1W, pan1H, { fx: 0.5, fy: 0.4 });
+  drawTag('EVIDENCE 01 · TECHNICIAN NACELLE COMM', pan1X + 16, pan1Y + 30, C.amber);
+  txt('ALEXANDER VANE · LEAD FIELD ENGINEER', pan1X + 16, pan1Y + pan1H - 24, { s: 15, f: F.mono, c: '#FFF', w: 'bold' });
+  drawWaveform(pan1X, pan1Y + pan1H + 15, pan1W, 70, t, t >= 0.8, C.amber);
+
+  // Right: Ruptured Manifold weeping oil under 210 bar
+  const pan2X = 960, pan2Y = 70, pan2W = 900, pan2H = 705;
+  coverImage(IM.rupture, pan2X, pan2Y, pan2W, pan2H, { fx: 0.45, fy: 0.5 });
+  drawTag('EVIDENCE 02 · HIGH PRESSURE MANIFOLD', pan2X + 16, pan2Y + 30, C.red);
+
+  // Red alert circle on valve PRV-992-B
+  const ringProg = seg(t, 2.0, 4.5);
+  drawRing(pan2X + 430, pan2Y + 340, 80, ringProg, 'PRV-992-B [210 BAR BLOWOUT]', 1, C.red);
+
+  // Diagnostic overlay
+  const alertAlpha = 0.6 + 0.4 * Math.sin(t * 8.0);
+  fill(pan2X + 20, pan2Y + pan2H - 120, 360, 95, 'rgba(20, 22, 25, 0.92)');
+  strokeRect(pan2X + 20, pan2Y + pan2H - 120, 360, 95, C.red, 1.5);
+  txt('HYDRAULIC PRESSURE SPIKE', pan2X + 36, pan2Y + pan2H - 95, { s: 13, f: F.mono, c: C.red, w: 'bold' });
+  txt('210.4 BAR', pan2X + 36, pan2Y + pan2H - 58, { s: 32, f: F.mono, c: C.red, w: 'bold', a: alertAlpha });
+  txt('SAFE LIMIT: 160 BAR (EXCEEDED)', pan2X + 36, pan2Y + pan2H - 36, { s: 12, f: F.mono, c: C.dim });
+}
+
+// ── Shot S02: Cloud RAG Failure & Downtime Escalation (8.0s - 15.5s) ──
+function renderScene02(t) {
+  const dt = t - 8.0;
+
+  // Background subtle strobe
+  const redFlash = Math.sin(dt * 6.0) > 0.3 ? 'rgba(255, 74, 46, 0.08)' : 'transparent';
+  fill(0, 48, W, H - 48, redFlash);
+
+  // Left: Cloud 504 Timeout Terminal Log
+  const pan1X = 60, pan1Y = 70, pan1W = 860, pan1H = 700;
+  fill(pan1X, pan1Y, pan1W, pan1H, C.panelDark);
+  strokeRect(pan1X, pan1Y, pan1W, pan1H, C.red, 1.5);
+  drawTag('CLOUD COMM TELEMETRY · 0 KBPS', pan1X + 20, pan1Y + 35, C.red);
+
+  txt('CONNECTION ATTEMPTS: CLOUD RAG BACKEND', pan1X + 20, pan1Y + 80, { s: 16, f: F.mono, c: C.dim });
+  hair(pan1X + 20, pan1Y + 95, pan1X + pan1W - 20, pan1Y + 95, C.lineDim);
+
+  const logs = [
+    { t: '14:22:08.10', msg: 'QUERY: POST https://cloud-rag.turbine-net.corp/query', col: C.text },
+    { t: '14:22:10.45', msg: 'DOWNLINK PACKET LOSS: 98.4% (STORM INTERFERENCE)', col: C.amber },
+    { t: '14:22:12.80', msg: 'GATEWAY RESPONSE TIMEOUT (30000ms EXPIRED)', col: C.red },
+    { t: '14:22:13.12', msg: 'HTTP ERROR 504: GATEWAY TIMEOUT', col: C.red, bold: true },
+    { t: '14:22:14.05', msg: 'DIAGNOSTIC AGENT OFFLINE. NO SCHEMATICS AVAILABLE.', col: C.red }
+  ];
+
+  logs.forEach((item, idx) => {
+    if (dt >= idx * 1.3) {
+      txt(item.t, pan1X + 25, pan1Y + 140 + idx * 45, { s: 13, f: F.mono, c: C.faint });
+      txt(item.msg, pan1X + 140, pan1Y + 140 + idx * 45, { s: 14, f: F.mono, c: item.col, w: item.bold ? 'bold' : 'normal' });
+    }
+  });
+
+  // Big 504 Stamped Box
+  fill(pan1X + 40, pan1Y + 440, pan1W - 80, 180, 'rgba(255, 74, 46, 0.12)');
+  strokeRect(pan1X + 40, pan1Y + 440, pan1W - 80, 180, C.red, 2);
+  txt('HTTP 504 GATEWAY TIMEOUT', pan1X + 80, pan1Y + 520, { s: 36, f: F.mono, c: C.red, w: 'bold' });
+  txt('CLOUD ASSISTANT UNREACHABLE · NACELLE ISOLATED', pan1X + 80, pan1Y + 570, { s: 16, f: F.mono, c: C.text });
+
+  // Right: Escalating Cost & Pitch Cylinder Danger
+  const pan2X = 960, pan2Y = 70, pan2W = 900, pan2H = 700;
+  fill(pan2X, pan2Y, pan2W, pan2H, C.panel);
+  strokeRect(pan2X, pan2Y, pan2W, pan2H, C.line);
+  drawTag('FINANCIAL & PHYSICAL CONSEQUENCE', pan2X + 20, pan2Y + 35, C.red);
+
+  // Downtime cost ticker
+  const cost = 12450 + Math.floor(dt * 3200);
+  txt('UNSCHEDULED OFFSHORE DOWNTIME', pan2X + 30, pan2Y + 110, { s: 18, f: F.sans, c: C.dim, w: '600' });
+  txt(`$${cost.toLocaleString()} USD`, pan2X + 30, pan2Y + 180, { s: 56, f: F.mono, c: C.red, w: 'bold' });
+  txt('BURNING RATE: $38,000 / HR (CREW BOAT + FORFEIT POWER)', pan2X + 30, pan2Y + 225, { s: 14, f: F.mono, c: C.amber });
+
+  // Blade Pitch Warning
+  fill(pan2X + 30, pan2Y + 290, pan2W - 60, 220, C.panelDark);
+  strokeRect(pan2X + 30, pan2Y + 290, pan2W - 60, 220, C.red, 1.5, [6, 4]);
+  drawTag('SCADA ACTUATOR ALERT', pan2X + 45, pan2Y + 325, C.red);
+  txt('PITCH CYLINDER SLIPPAGE DETECTED', pan2X + 45, pan2Y + 375, { s: 24, f: F.sans, c: C.text, w: 'bold' });
+  txt('PITCH ANGLE: -14.2° (ASYMMETRIC ROTOR LOAD)', pan2X + 45, pan2Y + 415, { s: 18, f: F.mono, c: C.red });
+  txt('CATASTROPHIC STRUCTURAL BEARING OVERLOAD IN 120s', pan2X + 45, pan2Y + 455, { s: 16, f: F.mono, c: C.amber });
+
+  // Manifold thumbnail
+  coverImage(IM.rupture, pan2X + 30, pan2Y + 540, pan2W - 60, 130, { fx: 0.5, fy: 0.4 });
+}
+
+// ── Shot S03: Friendly Mascot / MECH-G Local AI Core Acquisition (15.5s - 22.0s) ──
+function renderScene03(t) {
+  const dt = t - 15.5;
+
+  // Center Feature: Our adorable friendly funny mascot holding the diagnostics tablet
+  const centerX = 420, centerY = 70, centerW = 1080, centerH = 700;
+  coverImage(IM.mascot, centerX, centerY, centerW, centerH, { fx: 0.5, fy: 0.35 });
+
+  // Cyan high-tech targeting overlay framing the mascot
+  strokeRect(centerX, centerY, centerW, centerH, C.cyan, 2);
+  drawTag('EDGE INTELLIGENCE CORE · ACTIVE', centerX + 20, centerY + 35, C.cyan);
+
+  // Radar sweep / circular reticle around the mascot's hard hat and tablet
+  const scanProg = seg(dt, 0.0, 5.0);
+  x.save();
+  x.strokeStyle = C.cyan;
+  x.lineWidth = 1.5;
+  x.setLineDash([8, 6]);
+  x.beginPath();
+  x.arc(centerX + centerW / 2, centerY + 280, 260 + 20 * Math.sin(dt * 3), 0, Math.PI * 2);
+  x.stroke();
+  x.restore();
+
+  // Floating Edge Telemetry Badges
+  // Left Badge
+  fill(80, 160, 300, 140, 'rgba(14, 16, 19, 0.92)');
+  strokeRect(80, 160, 300, 140, C.cyan, 1.5);
+  drawTag('LOCAL AGENT', 95, 190, C.cyan);
+  txt('MECH-G CORE', 95, 230, { s: 22, f: F.mono, c: C.text, w: 'bold' });
+  txt('STATUS: FULLY ONLINE', 95, 265, { s: 14, f: F.mono, c: C.green, w: 'bold' });
+
+  // Right Badge: Zero Cloud Dependence
+  fill(1540, 160, 300, 140, 'rgba(14, 16, 19, 0.92)');
+  strokeRect(1540, 160, 300, 140, C.cyan, 1.5);
+  drawTag('CLOUD PACKETS', 1555, 190, C.cyan);
+  txt('0 REQ NEEDED', 1555, 230, { s: 22, f: F.mono, c: C.text, w: 'bold' });
+  txt('100% AIR-GAPPED', 1555, 265, { s: 14, f: F.mono, c: C.green, w: 'bold' });
+
+  // Bottom Badge: Multimodal Edge Graph
+  fill(centerX + 60, centerY + centerH - 120, centerW - 120, 95, 'rgba(14, 16, 19, 0.95)');
+  strokeRect(centerX + 60, centerY + centerH - 120, centerW - 120, C.cyan, 1.5);
+  txt('MULTIMODAL ON-DEVICE REASONING', centerX + 90, centerY + centerH - 85, { s: 14, f: F.mono, c: C.cyan, w: 'bold' });
+  txt('LOCAL HYDRAULIC GRAPH LOADED IN 480ms · IDENTIFIED 1 HAZARD', centerX + 90, centerY + centerH - 50, { s: 18, f: F.sans, c: C.text, w: 'bold' });
+}
+
+// ── Shot S04: Target Lock & OSHA Padlock Clamping (22.0s - 28.0s) ──
+function renderScene04(t) {
+  const dt = t - 22.0;
+
+  // Split Screen: Valve identification on Left, OSHA Padlock on Right
+  const pan1X = 60, pan1Y = 70, pan1W = 870, pan1H = 700;
+  coverImage(IM.rupture, pan1X, pan1Y, pan1W, pan1H, { fx: 0.5, fy: 0.5 });
+  drawTag('MULTIMODAL VISION RECOGNITION', pan1X + 20, pan1Y + 35, C.cyan);
+
+  // Target lock reticle
+  const lockProg = seg(dt, 0.0, 2.5);
+  drawRing(pan1X + 420, pan1Y + 320, 95, lockProg, 'CONFIRMED: PRV-992-B [98.4%]', 1, C.green);
+
+  // Right: OSHA Padlock Clamped on Lever
+  const pan2X = 970, pan2Y = 70, pan2W = 890, pan2H = 700;
+  coverImage(IM.lock, pan2X, pan2Y, pan2W, pan2H, { fx: 0.25, fy: 0.45 });
+  drawTag('LOTO COMPLIANCE · OSHA 1910.147', pan2X + 20, pan2Y + 35, C.red);
+
+  // Padlock clamp indicator
+  if (dt >= 4.0) {
+    fill(pan2X + 40, pan2Y + pan2H - 140, pan2W - 80, 105, 'rgba(14, 16, 19, 0.95)');
+    strokeRect(pan2X + 40, pan2Y + pan2H - 140, pan2W - 80, C.green, 2);
+    txt('SAFETY INTERLOCK ENGAGED', pan2X + 65, pan2Y + pan2H - 105, { s: 15, f: F.mono, c: C.green, w: 'bold' });
+    txt('ZERO-ENERGY MECHANICAL LOCK VERIFIED', pan2X + 65, pan2Y + pan2H - 65, { s: 22, f: F.sans, c: C.text, w: 'bold' });
+  }
+}
+
+// ── Shot S05: Zero-Energy Verified & 3-Pass Torque Instructed (28.0s - 34.0s) ──
+function renderScene05(t) {
+  const dt = t - 28.0;
+
+  // Left: Pressure Gauge drops to 0 PSI
+  const pan1X = 60, pan1Y = 70, pan1W = 860, pan1H = 700;
+  fill(pan1X, pan1Y, pan1W, pan1H, C.panelDark);
+  strokeRect(pan1X, pan1Y, pan1W, pan1H, C.green, 1.5);
+  drawTag('HYDRAULIC PRESSURE TELEMETRY', pan1X + 20, pan1Y + 35, C.green);
+
+  // Animated Pressure drop
+  const dropK = seg(dt, 0.5, 3.0);
+  const currentBar = Math.max(0, 210.4 * (1.0 - dropK));
+  const currentPSI = Math.max(0, Math.floor(currentBar * 14.5038));
+
+  txt('ACCUMULATOR LINE DEPRESSURIZATION', pan1X + 30, pan1Y + 110, { s: 16, f: F.mono, c: C.dim });
+  txt(`${currentPSI} PSI`, pan1X + 30, pan1Y + 185, { s: 64, f: F.mono, c: currentPSI === 0 ? C.green : C.amber, w: 'bold' });
+  txt(currentPSI === 0 ? '✓ ZERO ENERGY CONFIRMED SAFE FOR COLLAR WORK' : 'VENTING RESIDUAL HYDRAULIC CHARGE...', pan1X + 30, pan1Y + 235, {
+    s: 16,
+    f: F.mono,
+    c: currentPSI === 0 ? C.green : C.amber
+  });
+
+  // Highlighted SOP Specification Strip
+  fill(pan1X + 30, pan1Y + 310, pan1W - 60, 250, C.panel);
+  strokeRect(pan1X + 30, pan1Y + 310, pan1W - 60, 250, C.line);
+  drawTag('OEM PROCEDURE · SOP-WTG-HYD-044', pan1X + 45, pan1Y + 345, C.cyan);
+  txt('SPECIFICATION: M12 HEX COLLAR BOLTS', pan1X + 45, pan1Y + 390, { s: 18, f: F.sans, c: C.text, w: 'bold' });
+
+  // 3-Stage Progress steps
+  const steps = [
+    { num: 'PASS 1', torque: '15 Nm', desc: 'Snug fit star sequence' },
+    { num: 'PASS 2', torque: '25 Nm', desc: 'Intermediate gasket compression' },
+    { num: 'PASS 3', torque: '35.0 Nm', desc: 'Final certified torque threshold' }
+  ];
+
+  steps.forEach((st, idx) => {
+    const sy = pan1Y + 430 + idx * 36;
+    txt(st.num, pan1X + 45, sy, { s: 14, f: F.mono, c: C.cyan, w: 'bold' });
+    txt(st.torque, pan1X + 130, sy, { s: 16, f: F.mono, c: C.text, w: 'bold' });
+    txt(`(${st.desc})`, pan1X + 230, sy, { s: 14, f: F.sans, c: C.dim });
+  });
+
+  // Right: Cute mascot in corner giving instructions
+  const pan2X = 960, pan2Y = 70, pan2W = 900, pan2H = 700;
+  coverImage(IM.mascot, pan2X, pan2Y, pan2W, pan2H, { fx: 0.5, fy: 0.3 });
+  drawTag('MECH-G GUIDANCE CORE', pan2X + 20, pan2Y + 35, C.cyan);
+}
+
+// ── Shot S06: Digital Torque Execution & Manifold Secured (34.0s - 40.0s) ──
+function renderScene06(t) {
+  const dt = t - 34.0;
+
+  // Center Feature: Digital Torque Wrench Tightening
+  const pan1X = 60, pan1Y = 70, pan1W = 1080, pan1H = 700;
+  coverImage(IM.lock, pan1X, pan1Y, pan1W, pan1H, { fx: 0.65, fy: 0.5 });
+  drawTag('CALIBRATED TORQUE EXECUTION', pan1X + 20, pan1Y + 35, C.green);
+
+  // Digital Torque Display Box overlay
+  let val = 15.0;
+  if (dt >= 2.0) val = 25.0;
+  if (dt >= 3.5) val = 35.0;
+
+  fill(pan1X + 40, pan1Y + pan1H - 180, 480, 140, 'rgba(14, 16, 19, 0.94)');
+  strokeRect(pan1X + 40, pan1Y + pan1H - 180, 480, 140, val === 35.0 ? C.green : C.amber, 2);
+  drawTag('DIGITAL TRANSDUCER', pan1X + 60, pan1Y + pan1H - 150, val === 35.0 ? C.green : C.amber);
+  txt(`${val.toFixed(1)} Nm`, pan1X + 60, pan1Y + pan1H - 85, { s: 48, f: F.mono, c: val === 35.0 ? C.green : C.text, w: 'bold' });
+  txt(val === 35.0 ? '✓ TORQUE PASS CERTIFIED · GASKET COMPRESSED' : 'TIGHTENING M12 COLLAR BOLTS...', pan1X + 60, pan1Y + pan1H - 55, {
+    s: 14,
+    f: F.mono,
+    c: val === 35.0 ? C.green : C.dim
+  });
+
+  // Right Side: System Restoration Checklist
+  const pan2X = 1180, pan2Y = 70, pan2W = 680, pan2H = 700;
+  fill(pan2X, pan2Y, pan2W, pan2H, C.panelDark);
+  strokeRect(pan2X, pan2Y, pan2W, pan2H, C.line);
+  drawTag('SYSTEM RECOVERY TELEMETRY', pan2X + 20, pan2Y + 35, C.green);
+
+  const checks = [
+    { done: dt >= 1.0, title: 'LEAK SEALED', sub: 'PRV-992-B flange tight' },
+    { done: dt >= 2.2, title: 'PRESSURE STABILIZED', sub: '160 bar operating baseline' },
+    { done: dt >= 3.5, title: 'BLADE PITCH RESTORED', sub: '0.0° synchronized feather' },
+    { done: dt >= 4.5, title: 'OFFSHORE TURBINE ONLINE', sub: 'Clean power export resumed' }
+  ];
+
+  checks.forEach((chk, idx) => {
+    const cy = pan2Y + 110 + idx * 125;
+    fill(pan2X + 20, cy, pan2W - 40, 100, chk.done ? 'rgba(16, 185, 129, 0.10)' : C.panel);
+    strokeRect(pan2X + 20, cy, pan2W - 40, 100, chk.done ? C.green : C.lineDim, 1);
+    txt(chk.done ? '✓ PASS' : '... PENDING', pan2X + 40, cy + 35, { s: 13, f: F.mono, c: chk.done ? C.green : C.faint, w: 'bold' });
+    txt(chk.title, pan2X + 40, cy + 65, { s: 18, f: F.sans, c: C.text, w: 'bold' });
+    txt(chk.sub, pan2X + 40, cy + 88, { s: 13, f: F.mono, c: C.dim });
+  });
+}
+
+// ── Shot S07: Forensic Verdict & Master MECH-G Lockup (40.0s - 48.0s) ──
+function renderScene07(t) {
+  const dt = t - 40.0;
+
+  if (dt < 4.0) {
+    // Kinetic Metric Slam: 3-column verification verdict
+    drawTag('FORENSIC INCIDENT RESOLUTION VERDICT', 60, 95, C.cyan);
+
+    const cols = [
+      { num: '84%', label: 'MTTR REDUCTION', sub: 'Downtime cut from 4.5h to 42m', col: C.green },
+      { num: '< 500ms', label: 'LOCAL GRAPH QUERY', sub: 'Sub-second edge AI retrieval', col: C.cyan },
+      { num: '100%', label: 'OFFLINE RESILIENCE', sub: 'Zero cloud packets required', col: C.amber }
+    ];
+
+    cols.forEach((col, idx) => {
+      const cx = 60 + idx * 620;
+      const cy = 130;
+      const cw = 580;
+      const ch = 560;
+
+      fill(cx, cy, cw, ch, C.panelDark);
+      strokeRect(cx, cy, cw, ch, col.col, 1.5);
+      drawTag(`METRIC 0${idx + 1}`, cx + 30, cy + 45, col.col);
+
+      txt(col.num, cx + 30, cy + 220, { s: 76, f: F.mono, c: col.col, w: 'bold' });
+      txt(col.label, cx + 30, cy + 290, { s: 26, f: F.sans, c: C.text, w: 'bold' });
+      hair(cx + 30, cy + 330, cx + cw - 30, cy + 330, C.lineDim);
+      txt(col.sub, cx + 30, cy + 380, { s: 18, f: F.sans, c: C.dim });
+    });
+  } else {
+    // 44.0s - 48.0s: Master Brand Lockup
+    fill(0, 0, W, H, C.bg);
+
+    // Left mascot accent thumbnail
+    coverImage(IM.mascot, 220, 260, 480, 480, { fx: 0.5, fy: 0.35, border: C.cyan });
+
+    // Right: Master Text Lockup
+    const tx = 760;
+    txt('MISSION-CRITICAL EDGE INTELLIGENCE', tx, 360, { s: 18, f: F.mono, c: C.cyan, w: 'bold' });
+    txt('MECH-G', tx, 460, { s: 92, f: F.sans, c: C.text, w: '900' });
+    txt('Zero Cloud. Zero Delays. Unforgiving Precision.', tx, 520, { s: 24, f: F.sans, c: C.dim });
+
+    hair(tx, 570, tx + 800, 570, C.line);
+    txt('REPO: https://github.com/narain-karti/MECH-G.git', tx, 620, { s: 18, f: F.mono, c: C.amber, w: 'bold' });
+    txt('LOCAL HOSTED · FULL STACK AUDITED · PRODUCTION READY', tx, 660, { s: 15, f: F.mono, c: C.faint });
+  }
+}
+
+// Boot the application
+boot();
+</script>
+</body>
+</html>
