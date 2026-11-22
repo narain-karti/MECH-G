@@ -2,9 +2,7 @@
 id: 4-system-architecture
 type: fault_code
 title: 4. System Architecture
-description: '` FIELD (per intersection) CONSUMERS +-----------------------------------------------+
-  | CCTV x4-8 (H.264/5) audio array (optional) | +-> EMS / hospital dispatch | | |
-  +-> Command ...'
+description: "Edge node hardware architecture and multi-tier inference cascade specification."
 tags:
 - fault_code
 - fieldops

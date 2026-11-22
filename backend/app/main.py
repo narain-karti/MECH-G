@@ -15,7 +15,8 @@ from app.routers import (
     graph_router,
     diagnostic_router,
     document_router,
-    chat_router
+    chat_router,
+    settings_router
 )
 
 # Configure logging
@@ -87,6 +88,7 @@ app.include_router(graph_router.router)
 app.include_router(diagnostic_router.router)
 app.include_router(document_router.router)
 app.include_router(chat_router.router)
+app.include_router(settings_router.router)
 
 
 @app.get("/", tags=["Health"])

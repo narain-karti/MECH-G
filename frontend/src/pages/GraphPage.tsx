@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { OKFNodeSummary, GraphStats } from "../types/diagnostic";
 import { ApiService } from "../services/api";
+import { Badge } from "../components/ui/badge";
+import { EmptyState } from "../components/ui/empty-state";
 
 // Custom Node for React Flow with Category Badges & Glow
 const CustomGraphNode: React.FC<NodeProps> = ({ data, selected }: any) => {
@@ -49,12 +51,12 @@ const CustomGraphNode: React.FC<NodeProps> = ({ data, selected }: any) => {
     return "border-purple-500/50 hover:border-purple-400";
   };
 
-  const getBadgeColor = () => {
-    if (category.includes("safety")) return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-    if (category.includes("component")) return "bg-blue-500/10 text-blue-400 border-blue-500/20";
-    if (category.includes("procedure")) return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-    if (category.includes("tool")) return "bg-cyan-500/10 text-cyan-400 border-cyan-500/20";
-    return "bg-purple-500/10 text-purple-400 border-purple-500/20";
+  const getTone = (): "amber" | "blue" | "emerald" | "cyan" | "purple" => {
+    if (category.includes("safety")) return "amber";
+    if (category.includes("component")) return "blue";
+    if (category.includes("procedure")) return "emerald";
+    if (category.includes("tool")) return "cyan";
+    return "purple";
   };
 
   return (
@@ -64,9 +66,9 @@ const CustomGraphNode: React.FC<NodeProps> = ({ data, selected }: any) => {
       <Handle type="target" position={Position.Left} className="!bg-[#3B82F6] !w-2 !h-2 !border-none" />
 
       <div className="flex items-center justify-between gap-2 mb-1">
-        <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full border uppercase ${getBadgeColor()}`}>
+        <Badge tone={getTone()} variant="subtle" size="sm" className="font-mono text-[9px] uppercase">
           {category || "CONCEPT"}
-        </span>
+        </Badge>
         {data.outgoing_count !== undefined && (
           <span className="text-[9px] font-mono text-[#9CA3AF]">
             {data.outgoing_count} edges
@@ -349,8 +351,12 @@ export const GraphPage: React.FC = () => {
           {/* Node Index List */}
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
             {filteredNodes.length === 0 ? (
-              <div className="text-center py-8 text-xs text-[#6B7280]">
-                No matching nodes found.
+              <div className="h-full flex items-center justify-center">
+                <EmptyState
+                  scene="search"
+                  title="No Concepts Found"
+                  description="Try adjusting your keyword filter or select another category."
+                />
               </div>
             ) : (
               filteredNodes.map((n) => (
@@ -360,9 +366,9 @@ export const GraphPage: React.FC = () => {
                   className="p-2.5 rounded-xl bg-[#141518] hover:bg-[#1E1F24] border border-[#27272A] hover:border-[#3A3B43] cursor-pointer transition-all"
                 >
                   <div className="flex items-center justify-between text-[10px] mb-1">
-                    <span className="font-mono text-[#9CA3AF] uppercase truncate max-w-[120px]">
+                    <Badge tone="neutral" variant="subtle" size="sm" className="font-mono uppercase truncate max-w-[120px]">
                       {n.category}
-                    </span>
+                    </Badge>
                     {n.part_numbers && n.part_numbers.length > 0 && (
                       <span className="font-mono text-cyan-400 truncate max-w-[120px]">
                         {n.part_numbers[0]}
@@ -438,9 +444,9 @@ export const GraphPage: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-[#27272A] mb-4">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-mono uppercase">
+                <Badge tone="purple" variant="subtle" size="sm" className="font-mono uppercase">
                   {selectedNodeData.category || "CONCEPT NODE"}
-                </span>
+                </Badge>
                 <h3 className="text-sm font-bold text-white truncate max-w-[320px]">
                   {selectedNodeData.title}
                 </h3>
@@ -498,9 +504,9 @@ export const GraphPage: React.FC = () => {
                   <ShieldAlert className="w-4 h-4 text-amber-400" />
                   <span className="text-white font-medium">OSHA 1910.147 Cross-Verification</span>
                 </div>
-                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                <Badge tone="emerald" variant="subtle" size="sm" className="font-mono">
                   LOTO Bound
-                </span>
+                </Badge>
               </div>
             </div>
 

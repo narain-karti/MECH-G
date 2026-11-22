@@ -90,3 +90,38 @@ async def get_diagnostic_session(
         raise HTTPException(status_code=404, detail="Diagnostic session not found")
     return session
 
+
+@router.post("/{diagnostic_id}/export")
+async def export_work_order(
+    diagnostic_id: str,
+    service: DiagnosticService = Depends(get_diagnostic_service)
+):
+    """
+    Exports structured field service work order with verified citations,
+    OSHA 1910.147 LOTO permit records, and torque calibrations.
+    """
+    from datetime import datetime, timezone
+    session = service.active_sessions.get(diagnostic_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Diagnostic session not found")
+
+    return {
+        "work_order_id": f"WO-2026-MECHG-{diagnostic_id[:8].upper()}",
+        "diagnostic_id": diagnostic_id,
+        "asset": session.detected_component.name,
+        "defect": session.detected_component.observed_defect,
+        "confidence": session.detected_component.confidence,
+        "part_number": session.detected_component.part_number,
+        "safety_clearance": (
+            f"SIGNED ({session.safety_interlocks.acknowledged_by})"
+            if session.safety_interlocks.acknowledged
+            else "UNVERIFIED"
+        ),
+        "safety_acknowledged_at": session.safety_interlocks.acknowledged_at,
+        "remediation_plan": session.remediation_plan.model_dump() if session.remediation_plan else None,
+        "citations": [c.model_dump() for c in session.citations],
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "status": "APPROVED_FOR_EXECUTION" if session.safety_interlocks.acknowledged else "SAFETY_HELD"
+    }
+
+

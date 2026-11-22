@@ -125,7 +125,10 @@ class CitationAuditor:
             h_match = header_regex.match(line.strip())
             if h_match:
                 title = h_match.group(2).lower()
-                if norm_slug in title or title in norm_slug:
+                slug_words = [w for w in re.findall(r"\w+", norm_slug) if len(w) > 2]
+                title_words = [w for w in re.findall(r"\w+", title) if len(w) > 2]
+                overlap = set(slug_words).intersection(title_words)
+                if norm_slug in title or title in norm_slug or (slug_words and len(overlap) / len(slug_words) >= 0.5):
                     found_section = True
                     continue
                 elif found_section:

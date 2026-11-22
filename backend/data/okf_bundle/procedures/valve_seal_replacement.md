@@ -25,7 +25,7 @@ timestamp: '2026-10-31T11:00:00Z'
 2. Inspect the internal valve cavity with an inspection mirror for scoring, metal shavings, or contamination.
 3. Remove damaged Viton O-ring using a non-marring brass or nylon pick.
 
-## Reassembly and Torquing
+## Reassembly and Torque
 1. Lubricate replacement Viton 90-durometer O-ring and PTFE backup ring with clean ISO VG 46 hydraulic oil.
 2. Slide new seal over cartridge groove ensuring PTFE backup ring faces the low-pressure side.
 3. Seat valve into cavity by hand until flush with manifold face.

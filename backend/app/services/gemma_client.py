@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 from typing import Optional, Dict, Any, List
@@ -175,10 +176,14 @@ class GemmaClient:
             await asyncio.sleep(0.015)
 
     def _generate_fallback_chat_response(self, prompt: str) -> str:
+        # Extract user question from prompt wrapper if present
+        question_match = re.search(r"Technician / Engineer Question:\s*(.*?)(?:\nProvide|\Z)", prompt, re.DOTALL | re.IGNORECASE)
+        user_query = question_match.group(1).strip() if question_match else prompt
+        q_lower = user_query.lower()
         p_lower = prompt.lower()
 
         # 1. Offline Mode / Edge Architecture query
-        if "offline" in p_lower or "connectivity" in p_lower or "disconnected" in p_lower or "edge mode" in p_lower:
+        if "offline" in q_lower or "connectivity" in q_lower or "disconnected" in q_lower or "edge mode" in q_lower:
             return (
                 "### 🛰️ MECH-G Offline Edge Intelligence Active\n\n"
                 "MECH-G is operating in **100% Offline-First Edge Mode**. All knowledge graph traversal, citation auditing, and safety gate verifications are executing locally in-memory without external cloud dependencies [^safety/lockout_tagout_hydraulics.md#isolation-procedure].\n\n"
@@ -191,7 +196,7 @@ class GemmaClient:
             )
 
         # 2. Safety / Lockout Tagout / LOTO / OSHA / Zero Energy
-        if "loto" in p_lower or "lockout" in p_lower or "tagout" in p_lower or "safety" in p_lower or "zero-energy" in p_lower or "zero energy" in p_lower:
+        if "loto" in q_lower or "lockout" in q_lower or "tagout" in q_lower or "safety" in q_lower or "zero-energy" in q_lower or "zero energy" in q_lower:
             return (
                 "### ⚠️ OSHA 1910.147 Lockout/Tagout (LOTO) & Safety Protocol\n\n"
                 "Per **OSHA Standard 1910.147** and the **Hydraulic Zero-Energy Isolation Protocol** [^safety/lockout_tagout_hydraulics.md#lockout-tagout-protocol], all maintenance on pressurized or electrical equipment requires strict de-energization prior to physical contact.\n\n"
@@ -212,7 +217,7 @@ class GemmaClient:
             )
 
         # 3. Fault Code E302 / Pressure Drop / Hydraulic Alarms
-        if "e302" in p_lower or "fault" in p_lower or "alarm" in p_lower or "pressure drop" in p_lower:
+        if "e302" in q_lower or "code" in q_lower or "alarm" in q_lower or "fault" in q_lower or "pressure drop" in q_lower:
             return (
                 "### 🚨 Diagnostic Analysis: Fault Code E302 (Hydraulic Pressure Drop)\n\n"
                 "According to the **Fault Code E302 Diagnostic Reference** [^fault_codes/code_e302_pressure_drop.md#diagnostic-steps], Code E302 triggers when manifold pressure decays below 180 bar during sustained operation.\n\n"
@@ -227,7 +232,7 @@ class GemmaClient:
             )
 
         # 4. Torque Specs / Tools / Wrenches
-        if "torque" in p_lower or "wrench" in p_lower or "fastener" in p_lower or "tighten" in p_lower:
+        if "torque" in q_lower or "wrench" in q_lower or "fastener" in q_lower or "tighten" in q_lower:
             return (
                 "### 🔧 Fastener Torque Specifications & Calibrated Tooling\n\n"
                 "According to the **Calibrated Torque Wrench Specification** [^tools/calibrated_torque_wrench.md#specifications] and **Valve Seal Procedure** [^procedures/valve_seal_replacement.md#reassembly-and-torque]:\n\n"
@@ -242,7 +247,7 @@ class GemmaClient:
             )
 
         # 5. Valve / PRV / Pressure Relief / Hydraulic Seals
-        if "valve" in p_lower or "prv" in p_lower or "pressure" in p_lower or "seal" in p_lower or "hydraulic" in p_lower or "leak" in p_lower:
+        if "valve" in q_lower or "prv" in q_lower or "pressure" in q_lower or "seal" in q_lower or "hydraulic" in q_lower or "leak" in q_lower:
             return (
                 "### ⚙️ Proportional Pressure Relief Valve (PRV-992-B) Overview & Service\n\n"
                 "Based on the **Industrial Machinery Knowledge Base** [^components/proportional_relief_valve_v2.md#overview], "
@@ -264,7 +269,7 @@ class GemmaClient:
             )
 
         # 6. PCB / Pitch Controller / Capacitor / Electronics
-        if "pcb" in p_lower or "pitch" in p_lower or "capacitor" in p_lower or "c14" in p_lower or "electrical" in p_lower or "board" in p_lower:
+        if "pcb" in q_lower or "pitch" in q_lower or "capacitor" in q_lower or "c14" in q_lower or "electrical" in q_lower or "board" in q_lower:
             return (
                 "### ⚡ Pitch Controller Power Board (PCB-PITCH-CTRL-V1) Diagnostics\n\n"
                 "According to the **Pitch Controller Power Board manual** [^components/pcb_pitch_controller_v1.md#specifications], "

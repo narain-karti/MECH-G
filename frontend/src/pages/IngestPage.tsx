@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { TopToolbar } from "../components/workspace/TopToolbar";
 import { useProcessing } from "../context/ProcessingContext";
 import {
@@ -18,6 +18,12 @@ import {
   Search,
   Sparkles
 } from "lucide-react";
+import { DropZone } from "../components/ui/drop-zone";
+import { TaskProgress, TaskProgressStatus } from "../components/ui/task-progress";
+import { LogStream, LogLine } from "../components/ui/log-stream";
+import { Badge } from "../components/ui/badge";
+import { EmptyState } from "../components/ui/empty-state";
+import { foldAway } from "../components/ui/delete-undo";
 
 interface DocumentItem {
   id: string;
@@ -32,23 +38,61 @@ interface DocumentItem {
 }
 
 export const IngestPage: React.FC = () => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // State
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(true);
   const [isCompiling, setIsCompiling] = useState(false);
+  const [compilationStatus, setCompilationStatus] = useState<TaskProgressStatus>("running");
+  const [compilationPhase, setCompilationPhase] = useState(0);
+  const [compilationStartedAt, setCompilationStartedAt] = useState<number | undefined>(undefined);
   const { setProcessing } = useProcessing();
 
   useEffect(() => {
     setProcessing(isCompiling, "OmniOKF Compiler parsing and generating knowledge nodes...");
   }, [isCompiling, setProcessing]);
   const [searchFilter, setSearchFilter] = useState("");
-  const [consoleLogs, setConsoleLogs] = useState<string[]>([
-    "[SYSTEM] OmniOKF Ingestion Engine initialized.",
-    "[STATUS] Ready to process raw OEM manuals, schematics & service bulletins.",
+
+  // LogStream records
+  const [logLines, setLogLines] = useState<LogLine[]>([
+    {
+      id: "1",
+      at: new Date(Date.now() - 30000),
+      level: "info",
+      source: "engine",
+      message: "OmniOKF Ingestion Engine initialized.",
+    },
+    {
+      id: "2",
+      at: new Date(Date.now() - 20000),
+      level: "info",
+      source: "compiler",
+      message: "Ready to process raw OEM manuals, schematics & service bulletins.",
+    },
+    {
+      id: "3",
+      at: new Date(Date.now() - 10000),
+      level: "debug",
+      source: "sqlite",
+      message: "SQLite provenance store connected: documents.db",
+    },
   ]);
+
+  const logPushRef = useRef<((lines: LogLine | LogLine[]) => void) | null>(null);
+
+  const addLog = useCallback((msg: string, level: "info" | "warn" | "error" | "debug" = "info", source = "compiler") => {
+    const newLine: LogLine = {
+      id: String(Date.now() + Math.random()),
+      at: new Date(),
+      level,
+      source,
+      message: msg,
+    };
+    setLogLines((prev) => [...prev.slice(-100), newLine]);
+    if (logPushRef.current) {
+      logPushRef.current(newLine);
+    }
+  }, []);
 
   // Modals
   const [inspectDoc, setInspectDoc] = useState<DocumentItem | null>(null);
@@ -75,35 +119,44 @@ export const IngestPage: React.FC = () => {
     fetchDocuments();
   }, []);
 
-  const addLog = (msg: string) => {
-    setConsoleLogs((prev) => [...prev.slice(-30), `[${new Date().toLocaleTimeString()}] ${msg}`]);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const filesArray = Array.from(e.target.files);
-      setStagedFiles((prev) => [...prev, ...filesArray]);
-      addLog(`Staged ${filesArray.length} file(s) for OKF compilation.`);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const filesArray = Array.from(e.dataTransfer.files);
-      setStagedFiles((prev) => [...prev, ...filesArray]);
-      addLog(`Dropped ${filesArray.length} file(s) into compilation queue.`);
-    }
+  const handleFilesAdded = (files: File[]) => {
+    setStagedFiles((prev) => [...prev, ...files]);
+    addLog(`Staged ${files.length} file(s) for OKF compilation.`, "info", "staging");
   };
 
   const removeStagedFile = (idx: number) => {
     setStagedFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const compilationPhases = [
+    "MarkItDown Ingestion",
+    "AST Concept Segmentation",
+    "Vector Embedding Calculation",
+    "SQLite Provenance Sync",
+    "NetworkX Topology Linkage",
+  ];
+
   const handleCompileStaged = async () => {
     if (stagedFiles.length === 0) return;
     setIsCompiling(true);
-    addLog(`Uploading and compiling ${stagedFiles.length} file(s)...`);
+    setCompilationStatus("running");
+    setCompilationPhase(0);
+    setCompilationStartedAt(Date.now());
+    addLog(`Uploading and compiling ${stagedFiles.length} file(s)...`, "info", "ingest");
+
+    // Phase transition simulation
+    const phaseTimer1 = setTimeout(() => {
+      setCompilationPhase(1);
+      addLog("Extracting AST structural hierarchy and part numbers...", "debug", "ast");
+    }, 800);
+    const phaseTimer2 = setTimeout(() => {
+      setCompilationPhase(2);
+      addLog("Calculating local dense embeddings for concepts...", "debug", "embed");
+    }, 1600);
+    const phaseTimer3 = setTimeout(() => {
+      setCompilationPhase(3);
+      addLog("Writing nodes to disk at storage/okf/...", "info", "disk");
+    }, 2400);
 
     try {
       const formData = new FormData();
@@ -118,50 +171,73 @@ export const IngestPage: React.FC = () => {
 
       if (res.ok) {
         const result = await res.json();
-        addLog(`Compilation complete! Processed ${result.total_processed} files into ${result.total_nodes_generated} nodes.`);
+        setCompilationPhase(4);
+        setCompilationStatus("done");
+        addLog(
+          `Compilation complete! Processed ${result.total_processed} files into ${result.total_nodes_generated} nodes.`,
+          "info",
+          "success"
+        );
         setStagedFiles([]);
         await fetchDocuments();
       } else {
-        addLog(`Compilation warning: Server returned status ${res.status}`);
+        setCompilationStatus("error");
+        addLog(`Compilation warning: Server returned status ${res.status}`, "warn", "server");
       }
     } catch (err: any) {
-      addLog(`Compilation error: ${err.message || "Failed to reach server"}`);
+      setCompilationStatus("error");
+      addLog(`Compilation error: ${err.message || "Failed to reach server"}`, "error", "error");
     } finally {
-      setIsCompiling(false);
+      clearTimeout(phaseTimer1);
+      clearTimeout(phaseTimer2);
+      clearTimeout(phaseTimer3);
+      setTimeout(() => {
+        setIsCompiling(false);
+      }, 3000);
     }
   };
 
   const handleCompileAllExisting = async () => {
     setIsCompiling(true);
-    addLog("Re-compiling all stored documents from raw directory...");
+    setCompilationStatus("running");
+    setCompilationPhase(0);
+    setCompilationStartedAt(Date.now());
+    addLog("Re-compiling all stored documents from raw directory...", "info", "batch");
     try {
       const res = await fetch("/api/ingest/compile-all", { method: "POST" });
       if (res.ok) {
         const result = await res.json();
-        addLog(`Re-compilation finished! ${result.total_nodes_generated} total OKF nodes generated.`);
+        setCompilationPhase(4);
+        setCompilationStatus("done");
+        addLog(`Re-compilation finished! ${result.total_nodes_generated} total OKF nodes generated.`, "info", "batch");
         await fetchDocuments();
       }
     } catch (err: any) {
-      addLog(`Re-compilation error: ${err.message}`);
+      setCompilationStatus("error");
+      addLog(`Re-compilation error: ${err.message}`, "error", "batch");
     } finally {
-      setIsCompiling(false);
+      setTimeout(() => setIsCompiling(false), 2000);
     }
   };
 
-  const handleDeleteDocument = async () => {
+  const handleDeleteDocument = async (rowElement?: HTMLElement | null) => {
     if (!docToDelete) return;
     setIsDeleting(true);
-    addLog(`Deleting document ${docToDelete.filename} and associated OKF nodes...`);
+    addLog(`Deleting document ${docToDelete.filename} and associated OKF nodes...`, "warn", "delete");
 
     try {
+      if (rowElement) {
+        await foldAway(rowElement, { sound: true });
+      }
+
       const res = await fetch(`/api/documents/${docToDelete.id}`, { method: "DELETE" });
       if (res.ok) {
-        addLog(`Document ${docToDelete.filename} deleted successfully.`);
+        addLog(`Document ${docToDelete.filename} deleted successfully.`, "info", "delete");
         setDocToDelete(null);
         await fetchDocuments();
       }
     } catch (err: any) {
-      addLog(`Failed to delete document: ${err.message}`);
+      addLog(`Failed to delete document: ${err.message}`, "error", "delete");
     } finally {
       setIsDeleting(false);
     }
@@ -185,7 +261,7 @@ export const IngestPage: React.FC = () => {
       {/* Floating Island Layout */}
       <main className="flex-1 p-3 pt-1 flex gap-3 min-h-0 overflow-hidden">
         {/* Left Island: Upload Engine & Compilation Terminal */}
-        <section className="w-[420px] lg:w-[460px] flex-shrink-0 bg-[#18181A] rounded-[24px] border border-[#27272A] p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">
+        <section className="w-[440px] lg:w-[480px] flex-shrink-0 bg-[#18181A] rounded-[24px] border border-[#27272A] p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">
           <div className="space-y-4">
             {/* Header */}
             <div className="pb-3 border-b border-[#27272A] flex items-center justify-between">
@@ -198,32 +274,20 @@ export const IngestPage: React.FC = () => {
                   <p className="text-[10px] text-[#9CA3AF]">MarkItDown + PyMuPDF AST Parser</p>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-[#34D399]/10 text-[#34D399] border border-[#34D399]/20 text-[10px] font-mono">
+              <Badge tone="emerald" variant="subtle" size="sm" className="font-mono">
                 Active Edge
-              </span>
+              </Badge>
             </div>
 
-            {/* Dropzone */}
-            <div
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-[#27272A] hover:border-[#34D399]/50 rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer bg-[#141518] hover:bg-[#1A1B20] transition-all"
-            >
-              <UploadCloud className="w-8 h-8 text-[#9CA3AF] mb-2" />
-              <p className="text-xs text-white font-semibold">
-                Click to browse or drag & drop OEM documents
-              </p>
-              <p className="text-[10px] text-[#6B7280] mt-1">
-                Supports PDF, DOCX, XLSX, TXT, and Markdown
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
+            {/* Hairline DropZone */}
+            <div>
+              <DropZone
                 accept=".pdf,.docx,.xlsx,.txt,.md"
-                onChange={handleFileSelect}
+                title="Drop OEM Manuals or Schematics"
+                hint="Supports PDF, DOCX, XLSX, TXT, and Markdown"
+                maxSize={50 * 1024 * 1024}
+                onFilesChange={handleFilesAdded}
+                className="bg-[#141518] hover:bg-[#1A1B20] border-[#27272A] hover:border-[#34D399]/50 transition-all rounded-2xl"
               />
             </div>
 
@@ -240,7 +304,7 @@ export const IngestPage: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
+                <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar">
                   {stagedFiles.map((file, idx) => (
                     <div
                       key={idx}
@@ -262,6 +326,24 @@ export const IngestPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* TaskProgress Indicator during active compilation */}
+            {isCompiling && (
+              <div className="p-3 bg-[#141518] rounded-2xl border border-[#27272A]">
+                <TaskProgress
+                  title="Compiling OEM Knowledge Bundle"
+                  status={compilationStatus}
+                  phases={compilationPhases}
+                  phase={compilationPhase}
+                  startedAt={compilationStartedAt}
+                  message="Parsing tables, headings, and cross-references into atomic nodes."
+                  stats={[
+                    { label: "Staged Files", value: stagedFiles.length || documents.length },
+                    { label: "Parser", value: "PyMuPDF" },
+                  ]}
+                />
               </div>
             )}
 
@@ -295,17 +377,19 @@ export const IngestPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Execution Console Terminal */}
-            <div className="bg-[#101114] border border-[#27272A] rounded-2xl p-3 font-mono text-[10px] text-[#A1A1AA] space-y-1 h-36 overflow-y-auto custom-scrollbar">
-              <div className="flex items-center gap-1.5 text-cyan-400 font-bold border-b border-[#27272A] pb-1 mb-1">
-                <Terminal className="w-3 h-3" />
-                <span>COMPILATION CONSOLE</span>
-              </div>
-              {consoleLogs.map((log, i) => (
-                <div key={i} className="leading-tight">
-                  {log}
-                </div>
-              ))}
+            {/* Hairline LogStream Component */}
+            <div className="rounded-2xl border border-[#27272A] overflow-hidden bg-[#101114]">
+              <LogStream
+                defaultValue={logLines}
+                height={160}
+                title="OmniOKF Parser Stream"
+                subscribe={(push) => {
+                  logPushRef.current = push;
+                  return () => {
+                    logPushRef.current = null;
+                  };
+                }}
+              />
             </div>
           </div>
         </section>
@@ -354,9 +438,12 @@ export const IngestPage: React.FC = () => {
                 <span>Loading Knowledge Catalog...</span>
               </div>
             ) : filteredDocs.length === 0 ? (
-              <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-[#6B7280] text-xs">
-                <FileText className="w-8 h-8 mb-2 opacity-50" />
-                <p>No documents found matching your filter.</p>
+              <div className="h-full flex items-center justify-center">
+                <EmptyState
+                  scene="inbox"
+                  title="No Documents Ingested"
+                  description="Drop your OEM manuals, technical bulletins, or hydraulic schematics in the left panel to compile them into OKF nodes."
+                />
               </div>
             ) : (
               <table className="w-full text-left text-xs">
@@ -372,7 +459,11 @@ export const IngestPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-[#27272A]">
                   {filteredDocs.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-[#141518]/60 transition-colors group">
+                    <tr
+                      key={doc.id}
+                      id={`doc-row-${doc.id}`}
+                      className="hover:bg-[#141518]/60 transition-colors group"
+                    >
                       <td className="py-3 px-3">
                         <div className="font-semibold text-white flex items-center gap-2">
                           <FileText className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
@@ -384,9 +475,9 @@ export const IngestPage: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded bg-[#141518] border border-[#27272A] font-mono text-[10px] text-[#9CA3AF] uppercase">
+                        <Badge tone="neutral" variant="subtle" size="sm" className="font-mono uppercase">
                           {doc.filename.split(".").pop()}
-                        </span>
+                        </Badge>
                       </td>
 
                       <td className="py-3 px-3 font-mono text-[#9CA3AF] text-[11px]">
@@ -394,21 +485,20 @@ export const IngestPage: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-mono text-[10px] font-bold">
+                        <Badge tone="cyan" variant="subtle" size="sm" className="font-mono font-bold">
                           {doc.concepts_count} nodes
-                        </span>
+                        </Badge>
                       </td>
 
                       <td className="py-3 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-medium border ${
-                            doc.status === "READY"
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                              : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                          }`}
+                        <Badge
+                          tone={doc.status === "READY" ? "emerald" : "amber"}
+                          variant="subtle"
+                          size="sm"
+                          className="font-mono font-medium"
                         >
                           {doc.status}
-                        </span>
+                        </Badge>
                       </td>
 
                       <td className="py-3 px-3 text-right">
@@ -503,7 +593,7 @@ export const IngestPage: React.FC = () => {
 
             <p className="text-xs text-[#9CA3AF] leading-relaxed">
               Are you sure you want to delete <span className="text-white font-semibold">{docToDelete.filename}</span>?
-              This will remove the raw document and un-index its generated OKF nodes from the active knowledge graph.
+              This will fold away the raw document and un-index its generated OKF nodes from the active knowledge graph.
             </p>
 
             <div className="mt-6 flex justify-end gap-3">
@@ -514,12 +604,15 @@ export const IngestPage: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={handleDeleteDocument}
+                onClick={() => {
+                  const el = document.getElementById(`doc-row-${docToDelete.id}`);
+                  handleDeleteDocument(el);
+                }}
                 disabled={isDeleting}
                 className="px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{isDeleting ? "Deleting..." : "Delete Permanently"}</span>
+                <span>{isDeleting ? "Deleting..." : "Delete & Fold Away"}</span>
               </button>
             </div>
           </div>

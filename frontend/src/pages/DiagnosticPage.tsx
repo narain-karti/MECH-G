@@ -22,12 +22,19 @@ import {
   Gauge,
   Thermometer,
   Layers,
-  Check
+  Check,
+  Activity
 } from "lucide-react";
 import { DiagnosticResponse, CitationVerification } from "../types/diagnostic";
 import { SAMPLE_QUERIES, SampleQueryItem } from "../data/sampleData";
 import { ApiService } from "../services/api";
 import { useProcessing } from "../context/ProcessingContext";
+import { StepperInput } from "../components/ui/stepper-input";
+import { Steps } from "../components/ui/steps";
+import { Sparkline } from "../components/ui/sparkline";
+import { ApprovalCard } from "../components/ui/approval-card";
+import { EmptyState } from "../components/ui/empty-state";
+import { Badge } from "../components/ui/badge";
 
 export const DiagnosticPage: React.FC = () => {
   const location = useLocation();
@@ -47,9 +54,20 @@ export const DiagnosticPage: React.FC = () => {
   const [result, setResult] = useState<DiagnosticResponse | null>(null);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
 
-  // Telemetry Sliders
+  // Telemetry Inputs (Replaced with StepperInput)
   const [pressureBar, setPressureBar] = useState(210);
   const [tempCelsius, setTempCelsius] = useState(68);
+
+  // Live Sparkline Telemetry Simulation
+  const [pressureHistory, setPressureHistory] = useState<number[]>([
+    205, 208, 209, 212, 210, 211, 215, 210, 208, 210,
+  ]);
+  const [tempHistory, setTempHistory] = useState<number[]>([
+    62, 63, 64, 65, 66, 67, 67, 68, 68, 68,
+  ]);
+  const [vibrationHistory, setVibrationHistory] = useState<number[]>([
+    1.2, 1.4, 2.8, 3.5, 4.2, 4.9, 4.6, 5.1, 5.3, 5.2,
+  ]);
 
   // Remediation Steps Completion
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -62,6 +80,23 @@ export const DiagnosticPage: React.FC = () => {
   // Safety Gate Modal Inputs
   const [badgeId, setBadgeId] = useState("TECH-8842-OFFSHORE");
   const [safetyChecklist, setSafetyChecklist] = useState<string[]>([]);
+
+  // Diagnostics Pipeline Steps
+  const diagnosticPipelineStages = [
+    { label: "Telemetry Input", description: "Sensor signals & imagery staged" },
+    { label: "Gemma Multimodal", description: "Edge vision defect identification" },
+    { label: "AST Verification", description: "Closed-world OKF cross-reference" },
+    { label: "OSHA LOTO Gate", description: "Zero-energy compliance validation" },
+    { label: "Remediation", description: "Calibrated execution procedures" },
+  ];
+
+  const currentPipelineStep = !result
+    ? 0
+    : !result.safety_interlocks.acknowledged
+    ? 3
+    : completedSteps.length === (result.remediation_plan?.steps.length || 0)
+    ? 4
+    : 3;
 
   // Pre-load initial sample image
   useEffect(() => {
@@ -138,7 +173,7 @@ export const DiagnosticPage: React.FC = () => {
     if (!isRecordingAudio) {
       setIsRecordingAudio(true);
       setTimeout(() => {
-        setQueryText((prev) => `${prev} Acoustic acoustic telemetry: 14.2 kHz harmonic chatter detected.`);
+        setQueryText((prev) => `${prev} Acoustic telemetry: 14.2 kHz harmonic chatter detected.`);
         setIsRecordingAudio(false);
       }, 1800);
     } else {
@@ -152,6 +187,10 @@ export const DiagnosticPage: React.FC = () => {
       const res = await ApiService.runDiagnostic(imageFile, queryText);
       setResult(res);
       setCompletedSteps([]);
+      // Update sparklines with active reading
+      setPressureHistory((prev) => [...prev.slice(1), pressureBar]);
+      setTempHistory((prev) => [...prev.slice(1), tempCelsius]);
+      setVibrationHistory((prev) => [...prev.slice(1), 5.8]);
     } catch (e) {
       console.error(e);
     } finally {
@@ -208,9 +247,18 @@ export const DiagnosticPage: React.FC = () => {
                   <p className="text-[10px] text-[#9CA3AF]">Edge Multimodal Sensor Collector</p>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 text-[10px] font-mono font-medium">
+              <Badge tone="emerald" variant="subtle" size="sm" className="font-mono">
                 Live Sensor Hub
-              </span>
+              </Badge>
+            </div>
+
+            {/* Pipeline Stage Tracker */}
+            <div className="py-2 border-b border-[#27272A]">
+              <Steps
+                steps={diagnosticPipelineStages}
+                current={currentPipelineStep}
+                className="scale-90 origin-left"
+              />
             </div>
 
             {/* Asset Picker */}
@@ -294,10 +342,10 @@ export const DiagnosticPage: React.FC = () => {
               )}
             </div>
 
-            {/* Telemetry Sliders: Pressure & Temperature */}
-            <div className="bg-[#141518] border border-[#27272A] rounded-xl p-3 space-y-3">
+            {/* Telemetry Stepper Inputs: Pressure & Temperature with Live Sparklines */}
+            <div className="bg-[#141518] border border-[#27272A] rounded-xl p-3 space-y-3.5">
               <div>
-                <div className="flex items-center justify-between text-xs mb-1">
+                <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="text-[#9CA3AF] flex items-center gap-1.5">
                     <Gauge className="w-3.5 h-3.5 text-cyan-400" />
                     Hydraulic Manifold Pressure
@@ -306,18 +354,30 @@ export const DiagnosticPage: React.FC = () => {
                     {pressureBar} bar
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="350"
+                <StepperInput
+                  label="Manifold Pressure"
                   value={pressureBar}
-                  onChange={(e) => setPressureBar(Number(e.target.value))}
-                  className="w-full h-1.5 bg-[#27272A] rounded-lg appearance-none cursor-pointer accent-[#22D3EE]"
+                  onValueChange={setPressureBar}
+                  min={0}
+                  max={350}
+                  step={5}
+                  unit="bar"
+                  variant="field"
+                  size="sm"
                 />
+                <div className="mt-2">
+                  <Sparkline
+                    data={pressureHistory}
+                    height={24}
+                    color="#22D3EE"
+                    variant="area"
+                    suffix=" bar"
+                  />
+                </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between text-xs mb-1">
+                <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="text-[#9CA3AF] flex items-center gap-1.5">
                     <Thermometer className="w-3.5 h-3.5 text-amber-400" />
                     Reservoir Fluid Temperature
@@ -326,13 +386,44 @@ export const DiagnosticPage: React.FC = () => {
                     {tempCelsius} °C
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="20"
-                  max="120"
+                <StepperInput
+                  label="Fluid Temperature"
                   value={tempCelsius}
-                  onChange={(e) => setTempCelsius(Number(e.target.value))}
-                  className="w-full h-1.5 bg-[#27272A] rounded-lg appearance-none cursor-pointer accent-[#FBBF24]"
+                  onValueChange={setTempCelsius}
+                  min={20}
+                  max={120}
+                  step={1}
+                  unit="°C"
+                  variant="field"
+                  size="sm"
+                />
+                <div className="mt-2">
+                  <Sparkline
+                    data={tempHistory}
+                    height={24}
+                    color="#FBBF24"
+                    variant="line"
+                    suffix=" °C"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-[#9CA3AF] flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-rose-400" />
+                    Acoustic FFT Vibration Peak
+                  </span>
+                  <span className="font-mono font-bold text-rose-400 text-[10px]">
+                    5.2 mm/s RMS
+                  </span>
+                </div>
+                <Sparkline
+                  data={vibrationHistory}
+                  height={22}
+                  color="#FB7185"
+                  variant="bars"
+                  suffix=" mm/s"
                 />
               </div>
             </div>
@@ -389,26 +480,18 @@ export const DiagnosticPage: React.FC = () => {
         {/* Right Island: Remediation Analysis & Interactive Safety Gates */}
         <section className="flex-1 bg-[#18181A] rounded-[24px] border border-[#27272A] p-5 flex flex-col overflow-y-auto custom-scrollbar">
           {!result ? (
-            /* Standby State */
-            <div className="h-full flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto">
-              <div className="w-16 h-16 rounded-3xl bg-[#1E1F24] border border-[#27272A] flex items-center justify-center text-[#22D3EE] mb-4 shadow-xl">
-                <Wrench className="w-8 h-8" />
-              </div>
-              <h3 className="text-lg font-bold text-white tracking-tight">Ready for Telemetry Evaluation</h3>
-              <p className="text-xs text-[#9CA3AF] mt-2 leading-relaxed">
-                Configure your equipment asset, attach inspection photography or acoustic signals, and run the diagnostic. Gemma Multimodal will cross-reference the Open Knowledge Format graph and enforce OSHA 1910.147 interlocks.
-              </p>
-
-              <div className="grid grid-cols-2 gap-3 mt-6 w-full text-left">
-                <div className="p-3 rounded-xl bg-[#141518] border border-[#27272A]">
-                  <div className="text-[10px] font-mono text-[#6B7280] uppercase">Citation Guardrail</div>
-                  <div className="text-xs font-semibold text-white mt-0.5">Strict AST Closed-World</div>
-                </div>
-                <div className="p-3 rounded-xl bg-[#141518] border border-[#27272A]">
-                  <div className="text-[10px] font-mono text-[#6B7280] uppercase">Lockout/Tagout Gate</div>
-                  <div className="text-xs font-semibold text-amber-400 mt-0.5">OSHA 1910.147 Enforced</div>
-                </div>
-              </div>
+            /* Standby State with Hairline EmptyState */
+            <div className="h-full flex flex-col items-center justify-center">
+              <EmptyState
+                scene="search"
+                title="Ready for Telemetry Evaluation"
+                description="Configure your equipment asset, attach inspection photography or acoustic signals, and run the diagnostic. Gemma Multimodal will cross-reference the Open Knowledge Format graph and enforce OSHA 1910.147 interlocks."
+                action={{
+                  label: "Run Diagnostic Now",
+                  onAction: handleRunDiagnostic,
+                  icon: <Sparkles className="w-4 h-4 text-[#22D3EE]" />,
+                }}
+              />
             </div>
           ) : (
             /* Diagnostic Result */
@@ -417,9 +500,9 @@ export const DiagnosticPage: React.FC = () => {
               <div className="p-4 rounded-2xl bg-[#141518] border border-[#27272A] flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-mono font-bold">
+                    <Badge tone="rose" variant="subtle" size="sm" className="font-mono font-bold">
                       FAULT DETECTED
-                    </span>
+                    </Badge>
                     <span className="text-xs font-mono text-[#9CA3AF]">
                       ID: {result.diagnostic_id.slice(0, 12)}
                     </span>
@@ -450,61 +533,46 @@ export const DiagnosticPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* OSHA 1910.147 Safety Interlock Banner */}
-              <div
-                className={`p-4 rounded-2xl border transition-all ${
-                  result.safety_interlocks.acknowledged
-                    ? "bg-emerald-950/20 border-emerald-500/30"
-                    : "bg-amber-950/20 border-amber-500/30"
-                }`}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* OSHA 1910.147 Safety Interlock Approval Card */}
+              {!result.safety_interlocks.acknowledged ? (
+                <ApprovalCard
+                  title="OSHA 1910.147 Lockout/Tagout Gate"
+                  description="High hazardous hydraulic pressure (210 bar) and 480V ACB active. Certified zero-energy isolation is required to unlock procedural remediation steps."
+                  destructive
+                  status="pending"
+                  approveLabel="Authorize & Unlock Steps"
+                  denyLabel="Keep Interlocked"
+                  onApprove={() => setShowSafetyModal(true)}
+                  onDeny={() => {}}
+                  details={[
+                    { label: "Target Component", value: result.detected_component.name },
+                    { label: "Pressure State", value: `${pressureBar} bar (Must bleed to < 5 PSI)` },
+                    { label: "Interlock Standard", value: "OSHA 29 CFR 1910.147" },
+                  ]}
+                />
+              ) : (
+                <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                        result.safety_interlocks.acknowledged
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-amber-500/10 text-amber-400 animate-pulse"
-                      }`}
-                    >
-                      {result.safety_interlocks.acknowledged ? (
-                        <ShieldCheck className="w-5 h-5" />
-                      ) : (
-                        <ShieldAlert className="w-5 h-5" />
-                      )}
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                      <ShieldCheck className="w-5 h-5" />
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                        OSHA 1910.147 Lockout/Tagout Gate
-                        {result.safety_interlocks.acknowledged ? (
-                          <span className="text-[10px] text-emerald-400 font-mono font-normal">
-                            (VERIFIED BY {result.safety_interlocks.acknowledged_by})
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-amber-400 font-mono font-normal">
-                            (ACTION REQUIRED)
-                          </span>
-                        )}
+                        OSHA 1910.147 Verified Gate
+                        <span className="text-[10px] text-emerald-400 font-mono font-normal">
+                          (BY {result.safety_interlocks.acknowledged_by})
+                        </span>
                       </h4>
                       <p className="text-[11px] text-[#9CA3AF] mt-0.5">
-                        {result.safety_interlocks.acknowledged
-                          ? "Hazardous hydraulic & electrical energy verified isolated. Procedural steps unlocked."
-                          : "High hazardous hydraulic pressure detected. Sign safety badge to unlock execution steps."}
+                        Hazardous energy verified isolated and bled to zero-state. Repair execution unlocked.
                       </p>
                     </div>
                   </div>
-
-                  {!result.safety_interlocks.acknowledged && (
-                    <button
-                      onClick={() => setShowSafetyModal(true)}
-                      className="px-4 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0"
-                    >
-                      <Lock className="w-3.5 h-3.5" />
-                      <span>Sign OSHA Safety Gate</span>
-                    </button>
-                  )}
+                  <Badge tone="emerald" variant="solid" size="sm">
+                    LOTO ACTIVE
+                  </Badge>
                 </div>
-              </div>
+              )}
 
               {/* Remediation Plan & Steps */}
               {result.remediation_plan && (
@@ -801,11 +869,11 @@ export const DiagnosticPage: React.FC = () => {
       {selectedCitation && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-[#18181A] border border-[#27272A] rounded-[24px] p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#27272A] mb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-purple-400" />
-                Citation Verification Details
-              </h3>
+            <div className="flex items-center justify-between pb-3 border-b border-[#27272A] mb-4">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-purple-400" />
+                <h3 className="text-sm font-bold text-white">Citation Verification Details</h3>
+              </div>
               <button
                 onClick={() => setSelectedCitation(null)}
                 className="text-[#9CA3AF] hover:text-white p-1 rounded cursor-pointer"
@@ -815,26 +883,28 @@ export const DiagnosticPage: React.FC = () => {
             </div>
 
             <div className="space-y-3 text-xs">
-              <div>
-                <span className="text-[10px] text-[#9CA3AF] uppercase block font-mono">Citation Reference</span>
-                <span className="font-mono text-[#22D3EE] font-bold">{selectedCitation.raw_citation}</span>
+              <div className="p-3 bg-[#141518] rounded-xl border border-[#27272A] space-y-1">
+                <div className="text-[10px] font-mono text-[#9CA3AF]">RAW CITATION</div>
+                <div className="text-[#22D3EE] font-mono text-[11px]">{selectedCitation.raw_citation}</div>
               </div>
-              <div>
-                <span className="text-[10px] text-[#9CA3AF] uppercase block font-mono">Node Path</span>
-                <span className="font-mono text-[#9CA3AF]">{selectedCitation.node_path}</span>
+
+              <div className="p-3 bg-[#141518] rounded-xl border border-[#27272A] space-y-1">
+                <div className="text-[10px] font-mono text-[#9CA3AF]">TARGET NODE</div>
+                <div className="text-white font-mono text-[11px]">{selectedCitation.node_id}</div>
               </div>
-              <div>
-                <span className="text-[10px] text-[#9CA3AF] uppercase block font-mono">Verified Source Excerpt</span>
-                <div className="p-3 bg-[#141518] rounded-xl border border-[#27272A] text-white leading-relaxed font-sans mt-1">
-                  {selectedCitation.exact_source_text}
+
+              <div className="p-3 bg-[#141518] rounded-xl border border-[#27272A] space-y-1">
+                <div className="text-[10px] font-mono text-[#9CA3AF]">STATUS & PROVENANCE</div>
+                <div className="text-emerald-400 font-bold">
+                  {selectedCitation.status === "VERIFIED" ? "✓ VERIFIED IN AST GRAPH" : "UNVERIFIED"}
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end">
+            <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setSelectedCitation(null)}
-                className="px-4 py-1.5 rounded-full bg-[#232326] hover:bg-[#2A2A2F] text-white text-xs font-medium cursor-pointer"
+                className="px-5 py-2 rounded-full bg-[#22D3EE] hover:bg-[#06B6D4] text-black text-xs font-bold cursor-pointer"
               >
                 Close
               </button>
