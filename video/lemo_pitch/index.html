@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MECH-G: Architecture & Full-Codebase Pitch</title>
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0B0C0E;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+canvas {
+  display: block;
+  width: 1920px;
+  height: 1080px;
+}
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+// ── MECH-G Architecture & Product Pitch Canvas Engine ──
+const W = 1920, H = 1080;
+const cv = document.getElementById('c');
+const x = cv.getContext('2d');
+
+window.DUR = 60.0;
+
+// Color Palette
+const C = {
+  bg: '#0B0C0E',
+  panel: '#141619',
+  panelDark: '#0D0F11',
+  line: '#2E3238',
+  lineDim: '#1D2024',
+  text: '#ECEAE4',
+  dim: '#8B9097',
+  faint: '#4A4F57',
+  cyan: '#06B6D4',
+  cyanBright: '#22D3EE',
+  amber: '#F59E0B',
+  green: '#10B981',
+  red: '#FF4A2E',
+  codeBg: '#111317'
+};
+
+const F = {
+  sans: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  mono: '"Courier New", Courier, monospace'
+};
+
+// Math & Easing Helpers
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = k => 1 - Math.pow(1 - k, 3);
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// Image Assets
+const IM = {};
+function loadImage(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      console.warn('Failed to load image:', src);
+      resolve(null);
+    };
+    img.src = src;
+  });
+}
+
+// Subtitles mapping
+const SUBS = [
+  { s: 0.6, e: 7.5, text: "In high-stakes industrial fields, cloud AI fails. When a 210-bar hydraulic valve blows a seal at sea, internet does not exist." },
+  { s: 8.2, e: 16.5, text: "Enter MECH-G. Powered by Google Gemma 4 running entirely on-device, MECH-G brings deterministic intelligence to the edge with zero cloud dependencies." },
+  { s: 17.2, e: 25.5, text: "Under the hood, our Open Knowledge Format compiler transforms complex OEM manuals into an in-memory directed graph, traversing machine topologies in under 500 milliseconds." },
+  { s: 26.2, e: 33.5, text: "Safety demands zero hallucinations. Our AST Citation Auditor mathematically verifies every claim and torque specification directly against source nodes before streaming." },
+  { s: 34.2, e: 42.5, text: "Before a single bolt is turned, MECH-G enforces mandatory OSHA 1910.147 lockout gates. Combined with multimodal vision and acoustic audio telemetry, repairs are certified safe." },
+  { s: 43.2, e: 50.5, text: "The engineer workstation pairs a NotebookLM-style workspace with interactive visual graph exploration, putting verified procedures at the technician's fingertips." },
+  { s: 51.2, e: 59.2, text: "84% faster repairs. Completely offline. When seconds count, trust MECH-G. Star and clone today on GitHub!" }
+];
+
+async function boot() {
+  const assets = {
+    mascot: 'assets/avatar_mascot_friendly.jpg',
+    technician: 'assets/avatar_technician.jpg',
+    rupture: 'assets/asset_valve_rupture.jpg',
+    lock: 'assets/asset_lock_torque.jpg'
+  };
+
+  const loads = Object.entries(assets).map(([k, path]) => 
+    loadImage(path).then(img => { IM[k] = img; })
+  );
+
+  await Promise.all(loads);
+  window.READY = true;
+  console.log('[LEMO-PITCH] Loaded all visual assets. Ready to render.');
+}
+
+// ── Drawing Utilities ──
+function fill(X, Y, w, h, col) {
+  x.fillStyle = col;
+  x.fillRect(X, Y, w, h);
+}
+
+function strokeRect(X, Y, w, h, col = C.line, lw = 1, dash = null) {
+  x.save();
+  x.strokeStyle = col;
+  x.lineWidth = lw;
+  if (dash) x.setLineDash(dash);
+  x.strokeRect(X + 0.5, Y + 0.5, w - 1, h - 1);
+  x.restore();
+}
+
+function hair(x0, y0, x1, y1, col = C.line, lw = 1, dash = null) {
+  x.save();
+  x.strokeStyle = col;
+  x.lineWidth = lw;
+  if (dash) x.setLineDash(dash);
+  x.beginPath();
+  x.moveTo(x0, y0);
+  x.lineTo(x1, y1);
+  x.stroke();
+  x.restore();
+}
+
+function txt(s, X, Y, o = {}) {
+  x.save();
+  x.font = `${o.w || '400'} ${o.s || 20}px ${o.f || F.sans}`;
+  x.fillStyle = o.c || C.text;
+  x.textAlign = o.al || 'left';
+  x.textBaseline = o.bl || 'alphabetic';
+  if (o.a !== undefined) x.globalAlpha *= o.a;
+  x.fillText(s, X, Y);
+  const width = x.measureText(s).width;
+  x.restore();
+  return width;
+}
+
+function coverImage(img, X, Y, w, h, opt = {}) {
+  if (!img) {
+    fill(X, Y, w, h, '#000');
+    return;
+  }
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  let sw = iw, sh = iw * h / w;
+  if (sh > ih) {
+    sh = ih;
+    sw = ih * w / h;
+  }
+  const fx = opt.fx !== undefined ? opt.fx : 0.5;
+  const fy = opt.fy !== undefined ? opt.fy : 0.5;
+  const sx = (iw - sw) * fx;
+  const sy = (ih - sh) * fy;
+
+  x.save();
+  if (opt.a !== undefined) x.globalAlpha *= opt.a;
+  if (opt.filter) x.filter = opt.filter;
+  x.drawImage(img, sx, sy, sw, sh, X, Y, w, h);
+  x.restore();
+
+  if (!opt.noBorder) strokeRect(X, Y, w, h, opt.border || C.line, 1);
+}
+
+function drawTag(label, X, Y, col = C.cyan) {
+  fill(X, Y - 12, 4, 14, col);
+  txt(label, X + 10, Y, { s: 13, f: F.mono, c: col, w: 'bold' });
+}
+
+function drawPill(label, X, Y, col = C.cyan, bg = 'rgba(6, 182, 212, 0.12)') {
+  const w = txt(label, X + 14, Y + 18, { s: 12, f: F.mono, c: col, w: 'bold' }) + 28;
+  fill(X, Y, w, 26, bg);
+  strokeRect(X, Y, w, 26, col, 1);
+  return w;
+}
+
+function drawTopHeader(t, sectionTitle) {
+  fill(0, 0, W, 52, C.panelDark);
+  hair(0, 52, W, 52, C.line, 1);
+
+  // Logo
+  txt('MECH-G', 60, 35, { s: 22, f: F.sans, c: C.cyanBright, w: '900' });
+  txt('PRODUCT & ARCHITECTURE PITCH', 170, 34, { s: 13, f: F.mono, c: C.dim });
+
+  // Section Marker
+  drawTag('ACTIVE MODULE', 620, 34, C.amber);
+  txt(sectionTitle, 750, 34, { s: 14, f: F.mono, c: C.text, w: 'bold' });
+
+  // Timecode & Engine Stats
+  const tc = `${String(Math.floor(t)).padStart(2, '0')}:${String(Math.floor((t % 1) * 100)).padStart(2, '0')} / 60:00`;
+  txt(tc, 1680, 35, { s: 16, f: F.mono, c: C.text, w: 'bold' });
+}
+
+function drawSubtitles(t) {
+  const cur = SUBS.find(s => t >= s.s && t <= s.e);
+  if (!cur) return;
+
+  const barY = 965;
+  const barH = 68;
+  const barW = 1680;
+  const barX = (W - barW) / 2;
+
+  fill(barX, barY, barW, barH, 'rgba(11, 12, 14, 0.94)');
+  strokeRect(barX, barY, barW, barH, C.line, 1);
+  fill(barX, barY, 6, barH, C.cyan);
+
+  txt('PITCH NARRATIVE', barX + 24, barY + 24, { s: 11, f: F.mono, c: C.cyan, w: 'bold' });
+  txt(cur.text, barX + 24, barY + 50, { s: 19, f: F.sans, c: C.text, w: '600' });
+}
+
+// ── Master Render Function ──
+window.render = function(t) {
+  fill(0, 0, W, H, C.bg);
+
+  if (t < 8.0) {
+    drawTopHeader(t, '01 · THE PROBLEM: INDUSTRIAL EDGE ENVIRONMENT');
+    renderPitch01(t);
+  } else if (t < 17.0) {
+    drawTopHeader(t, '02 · CORE ARCHITECTURE: LOCAL GEMMA 4 (26B)');
+    renderPitch02(t);
+  } else if (t < 26.0) {
+    drawTopHeader(t, '03 · FEATURE 1: OKF COMPILER & IN-MEMORY GRAPH');
+    renderPitch03(t);
+  } else if (t < 34.0) {
+    drawTopHeader(t, '04 · FEATURE 2: CLOSED-WORLD CITATION AUDITOR');
+    renderPitch04(t);
+  } else if (t < 43.0) {
+    drawTopHeader(t, '05 · FEATURE 3: OSHA LOTO GATE & MULTIMODAL TRIAGE');
+    renderPitch05(t);
+  } else if (t < 51.0) {
+    drawTopHeader(t, '06 · FEATURE 4: NOTEBOOKLM-STYLE KNOWLEDGE WORKSPACE');
+    renderPitch06(t);
+  } else {
+    drawTopHeader(t, '07 · VALUE VERDICT & GITHUB REPO');
+    renderPitch07(t);
+  }
+
+  drawSubtitles(t);
+};
+
+// ── 01: The Problem: Extreme Machines & Cloud Failure (0.0s - 8.0s) ──
+function renderPitch01(t) {
+  const pan1X = 60, pan1Y = 75, pan1W = 860, pan1H = 710;
+  coverImage(IM.rupture, pan1X, pan1Y, pan1W, pan1H, { fx: 0.45, fy: 0.5 });
+  drawTag('HIGH-VALUE INDUSTRIAL ASSET', pan1X + 20, pan1Y + 35, C.red);
+
+  fill(pan1X + 20, pan1Y + pan1H - 120, 420, 95, 'rgba(14, 16, 19, 0.94)');
+  strokeRect(pan1X + 20, pan1Y + pan1H - 120, 420, 95, C.red, 1.5);
+  txt('HYDRAULIC MANIFOLD BLOWOUT', pan1X + 35, pan1Y + pan1H - 95, { s: 13, f: F.mono, c: C.red, w: 'bold' });
+  txt('210.4 BAR CRITICAL SPIKE', pan1X + 35, pan1Y + pan1H - 58, { s: 28, f: F.mono, c: C.red, w: 'bold' });
+  txt('VALVE: PRV-992-B · OFFSHORE NACELLE', pan1X + 35, pan1Y + pan1H - 36, { s: 12, f: F.mono, c: C.dim });
+
+  // Right Panel: Why Cloud AI & Vector RAG Fail
+  const pan2X = 960, pan2Y = 75, pan2W = 900, pan2H = 710;
+  fill(pan2X, pan2Y, pan2W, pan2H, C.panel);
+  strokeRect(pan2X, pan2Y, pan2W, pan2H, C.line);
+  drawTag('THE 2 FATAL FAILURES OF STANDARD AI', pan2X + 25, pan2Y + 40, C.red);
+
+  // Failure Card 1: Cloud Choke
+  fill(pan2X + 25, pan2Y + 70, pan2W - 50, 240, C.panelDark);
+  strokeRect(pan2X + 25, pan2Y + 70, pan2W - 50, 240, C.red, 1.5);
+  txt('1. ZERO INTERNET / CLOUD CHOKE', pan2X + 45, pan2Y + 110, { s: 20, f: F.sans, c: C.text, w: 'bold' });
+  txt('HTTP 504 GATEWAY TIMEOUT · DOWNLINK 0 KBPS', pan2X + 45, pan2Y + 145, { s: 15, f: F.mono, c: C.red, w: 'bold' });
+  txt('Offshore turbines, mines, and substations are metal Faraday cages.', pan2X + 45, pan2Y + 185, { s: 16, f: F.sans, c: C.dim });
+  txt('Cloud SaaS bots fail exactly when engineers need them most.', pan2X + 45, pan2Y + 215, { s: 16, f: F.sans, c: C.dim });
+
+  // Failure Card 2: The Vector RAG Trap
+  fill(pan2X + 25, pan2Y + 340, pan2W - 50, 330, C.panelDark);
+  strokeRect(pan2X + 25, pan2Y + 340, pan2W - 50, 330, C.amber, 1.5);
+  txt('2. THE VECTOR RAG HALLUCINATION TRAP', pan2X + 45, pan2Y + 380, { s: 20, f: F.sans, c: C.text, w: 'bold' });
+  txt('Standard vector chunking chops manuals into isolated paragraphs.', pan2X + 45, pan2Y + 420, { s: 16, f: F.sans, c: C.dim });
+  txt('It hallucinates torque specifications (e.g. 55 Nm instead of 35 Nm).', pan2X + 45, pan2Y + 450, { s: 16, f: F.sans, c: C.amber });
+  txt('At 210 bar pressure, an incorrect torque strips threads and causes fatal explosions.', pan2X + 45, pan2Y + 480, { s: 15, f: F.sans, c: C.dim });
+
+  fill(pan2X + 45, pan2Y + 520, pan2W - 90, 110, '#1E1210');
+  strokeRect(pan2X + 45, pan2Y + 520, pan2W - 90, 110, C.red, 1);
+  txt('DOWNTIME COST ACCUMULATING', pan2X + 65, pan2Y + 555, { s: 13, f: F.mono, c: C.red, w: 'bold' });
+  txt('$38,000 / HOUR FORFEIT REVENUE', pan2X + 65, pan2Y + 595, { s: 26, f: F.mono, c: C.red, w: 'bold' });
+}
+
+// ── 02: Meet MECH-G & Architecture (8.0s - 17.0s) ──
+function renderPitch02(t) {
+  const dt = t - 8.0;
+
+  // Center: Mascot Avatar Presentation
+  const masX = 60, masY = 75, masW = 620, masH = 710;
+  coverImage(IM.mascot, masX, masY, masW, masH, { fx: 0.5, fy: 0.35 });
+  drawTag('MECH-G COMPANION AVATAR', masX + 20, masY + 35, C.cyan);
+
+  fill(masX + 20, masY + masH - 110, masW - 40, 85, 'rgba(14, 16, 19, 0.94)');
+  strokeRect(masX + 20, masY + masH - 110, masW - 40, 85, C.cyan, 1.5);
+  txt('FRIENDLY EDGE INTELLIGENCE', masX + 35, masY + masH - 85, { s: 12, f: F.mono, c: C.cyan, w: 'bold' });
+  txt('Deterministic • Offline • Unforgiving Precision', masX + 35, masY + masH - 55, { s: 15, f: F.sans, c: C.text, w: 'bold' });
+
+  // Right Side: Codebase Architecture Map
+  const arcX = 720, arcY = 75, arcW = 1140, arcH = 710;
+  fill(arcX, arcY, arcW, arcH, C.panel);
+  strokeRect(arcX, arcY, arcW, arcH, C.line);
+  drawTag('FULL-STACK CODEBASE ARCHITECTURE', arcX + 25, arcY + 40, C.cyan);
+
+  // Layer 1: FastAPI Backend
+  fill(arcX + 25, arcY + 70, arcW - 50, 170, C.panelDark);
+  strokeRect(arcX + 25, arcY + 70, arcW - 50, 170, C.cyan, 1.5);
+  txt('BACKEND: FASTAPI ASYNC ENGINE (PORT 8000)', arcX + 45, arcY + 105, { s: 18, f: F.mono, c: C.cyanBright, w: 'bold' });
+  txt('File: backend/app/main.py · Pydantic v2 schemas · SQLite in-memory repository', arcX + 45, arcY + 135, { s: 14, f: F.mono, c: C.dim });
+  txt('Routers: /api/chat · /api/diagnose · /api/graph · /api/ingest · /api/notebooks', arcX + 45, arcY + 165, { s: 14, f: F.mono, c: C.amber });
+  txt('SSE Streaming Pipeline with sub-10ms token latency', arcX + 45, arcY + 195, { s: 14, f: F.mono, c: C.green });
+
+  // Layer 2: Google Gemma 4 AI Core
+  fill(arcX + 25, arcY + 260, arcW - 50, 170, C.panelDark);
+  strokeRect(arcX + 25, arcY + 260, arcW - 50, 170, C.amber, 1.5);
+  txt('LOCAL REASONING: GOOGLE GEMMA 4 (26B)', arcX + 45, arcY + 295, { s: 18, f: F.mono, c: C.amber, w: 'bold' });
+  txt('File: backend/app/services/gemma_client.py', arcX + 45, arcY + 325, { s: 14, f: F.mono, c: C.dim });
+  txt('Quantized 4-bit local weights · Execution on edge laptop RTX 4090 / M-series', arcX + 45, arcY + 355, { s: 14, f: F.mono, c: C.text });
+  txt('Zero internet packets sent · 100% telemetry privacy', arcX + 45, arcY + 385, { s: 14, f: F.mono, c: C.green, w: 'bold' });
+
+  // Layer 3: React 19 / Vite UI
+  fill(arcX + 25, arcY + 450, arcW - 50, 220, C.panelDark);
+  strokeRect(arcX + 25, arcY + 450, arcW - 50, 220, C.green, 1.5);
+  txt('FRONTEND: REACT 19 + VITE WORKSPACE (PORT 3000)', arcX + 45, arcY + 485, { s: 18, f: F.mono, c: C.green, w: 'bold' });
+  txt('File: frontend/src/App.tsx · Tailwind CSS · Lucide Icons', arcX + 45, arcY + 515, { s: 14, f: F.mono, c: C.dim });
+  txt('Components: NotebookLM Workspace · OSHA 1910.147 Simulator · Multimodal Dropzone', arcX + 45, arcY + 545, { s: 14, f: F.mono, c: C.text });
+  txt('Interactive Knowledge Graph Explorer powered by @xyflow/react', arcX + 45, arcY + 575, { s: 14, f: F.mono, c: C.cyanBright });
+  txt('Real-time Audio FFT visualizer and sound telemetry analyzer', arcX + 45, arcY + 605, { s: 14, f: F.mono, c: C.amber });
+}
+
+// ── 03: Feature 1 - OKF Compiler & In-Memory Graph (17.0s - 26.0s) ──
+function renderPitch03(t) {
+  const dt = t - 17.0;
+
+  // Left: OKF Compiler Pipeline
+  const pan1X = 60, pan1Y = 75, pan1W = 860, pan1H = 710;
+  fill(pan1X, pan1Y, pan1W, pan1H, C.panel);
+  strokeRect(pan1X, pan1Y, pan1W, pan1H, C.line);
+  drawTag('OEM DOCUMENT INGESTION PIPELINE', pan1X + 25, pan1Y + 40, C.cyan);
+
+  const steps = [
+    { title: '1. OEM Manual Parsing', path: 'backend/app/services/okf_compiler/parser.py', desc: 'Parses 4,000-page PDF / Markdown into typed AST nodes.' },
+    { title: '2. Entity & Metadata Extraction', path: 'backend/app/services/okf_compiler/metadata_extractor.py', desc: 'Extracts part numbers (PRV-992-B), torque tolerances, torque limits.' },
+    { title: '3. Deterministic Graph Linker', path: 'backend/app/services/okf_compiler/linker.py', desc: 'Generates typed edges: [HAS_PART], [REQUIRES_LOTO], [TORQUE_SPEC].' },
+    { title: '4. Knowledge Pack Manifest', path: 'backend/app/services/okf_compiler/manifest.py', desc: 'Bundles OKF package with cryptographic SHA-256 integrity hash.' }
+  ];
+
+  steps.forEach((st, idx) => {
+    const sy = pan1Y + 70 + idx * 145;
+    fill(pan1X + 25, sy, pan1W - 50, 125, C.panelDark);
+    strokeRect(pan1X + 25, sy, pan1W - 50, 125, C.lineDim);
+    txt(st.title, pan1X + 45, sy + 32, { s: 17, f: F.sans, c: C.cyan, w: 'bold' });
+    txt(st.path, pan1X + 45, sy + 62, { s: 13, f: F.mono, c: C.dim });
+    txt(st.desc, pan1X + 45, sy + 94, { s: 15, f: F.sans, c: C.text });
+  });
+
+  // Right: Live Directed Knowledge Graph
+  const pan2X = 960, pan2Y = 75, pan2W = 900, pan2H = 710;
+  fill(pan2X, pan2Y, pan2W, pan2H, C.panelDark);
+  strokeRect(pan2X, pan2Y, pan2W, pan2H, C.cyan, 1.5);
+  drawTag('IN-MEMORY DIRECTED GRAPH (NETWORKX)', pan2X + 25, pan2Y + 40, C.cyan);
+  txt('File: backend/app/services/graph_engine.py', pan2X + 25, pan2Y + 75, { s: 14, f: F.mono, c: C.dim });
+
+  // Pulsing Graph Nodes & Directed Edges
+  const nodes = [
+    { id: 'TURBINE WTG-09B', x: pan2X + 450, y: pan2Y + 180, col: C.cyanBright, r: 42 },
+    { id: 'HYDRAULIC SKID', x: pan2X + 230, y: pan2Y + 340, col: C.amber, r: 36 },
+    { id: 'ROTOR BEARING', x: pan2X + 670, y: pan2Y + 340, col: C.dim, r: 36 },
+    { id: 'VALVE PRV-992-B', x: pan2X + 230, y: pan2Y + 520, col: C.red, r: 40 },
+    { id: 'OSHA LOTO GATE', x: pan2X + 450, y: pan2Y + 460, col: C.green, r: 38 },
+    { id: 'TORQUE: 35.0 Nm', x: pan2X + 670, y: pan2Y + 520, col: C.green, r: 36 }
+  ];
+
+  // Draw Edges
+  hair(nodes[0].x, nodes[0].y, nodes[1].x, nodes[1].y, C.cyan, 2);
+  hair(nodes[0].x, nodes[0].y, nodes[2].x, nodes[2].y, C.line, 1.5);
+  hair(nodes[1].x, nodes[1].y, nodes[3].x, nodes[3].y, C.red, 2);
+  hair(nodes[3].x, nodes[3].y, nodes[4].x, nodes[4].y, C.green, 2);
+  hair(nodes[4].x, nodes[4].y, nodes[5].x, nodes[5].y, C.green, 2);
+
+  // Draw Nodes
+  nodes.forEach(n => {
+    fill(n.x - n.r, n.y - n.r, n.r * 2, n.r * 2, C.panel);
+    x.save();
+    x.beginPath();
+    x.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    x.fillStyle = 'rgba(20, 22, 25, 0.9)';
+    x.fill();
+    x.strokeStyle = n.col;
+    x.lineWidth = 2.5;
+    x.stroke();
+    x.restore();
+    txt(n.id, n.x, n.y + 4, { s: 11, f: F.mono, c: C.text, w: 'bold', al: 'center' });
+  });
+
+  // Telemetry Badge
+  fill(pan2X + 40, pan2Y + pan2H - 85, pan2W - 80, 55, 'rgba(6, 182, 212, 0.12)');
+  strokeRect(pan2X + 40, pan2Y + pan2H - 85, pan2W - 80, 55, C.cyan, 1);
+  txt('⚡ GRAPH TRAVERSAL: < 480ms · 12,480 LOCAL NODES · ZERO HALLUCINATION', pan2X + 60, pan2Y + pan2H - 50, {
+    s: 14,
+    f: F.mono,
+    c: C.cyanBright,
+    w: 'bold'
+  });
+}
+
+// ── 04: Feature 2 - Zero-Hallucination Citation Auditor (26.0s - 34.0s) ──
+function renderPitch04(t) {
+  const pan1X = 60, pan1Y = 75, pan1W = 1800, pan1H = 710;
+  fill(pan1X, pan1Y, pan1W, pan1H, C.panel);
+  strokeRect(pan1X, pan1Y, pan1W, pan1H, C.line);
+  drawTag('MATHEMATICAL GROUNDING: CLOSED-WORLD CITATION AUDITOR', pan1X + 25, pan1Y + 40, C.green);
+
+  // Code Block
+  fill(pan1X + 25, pan1Y + 70, pan1W - 50, 240, C.codeBg);
+  strokeRect(pan1X + 25, pan1Y + 70, pan1W - 50, 240, C.lineDim);
+  drawTag('PYTHON CODE: backend/app/services/citation_auditor.py', pan1X + 45, pan1Y + 105, C.dim);
+
+  const code = [
+    'class CitationAuditor:',
+    '    def audit_response(self, text: str, graph_context: OKFGraph) -> AuditVerdict:',
+    '        citations = self.extract_ast_claims(text)  # Parse all claimed specs & torque values',
+    '        for claim in citations:',
+    '            if not graph_context.has_grounded_node(claim.source_doc, claim.section, claim.value):',
+    '                raise HallucinationDetectedError(f"Rejected: {claim} has no AST grounding!")',
+    '        return AuditVerdict(status="VERIFIED_100_PERCENT", trusted_citations=citations)'
+  ];
+
+  code.forEach((line, idx) => {
+    txt(line, pan1X + 45, pan1Y + 140 + idx * 24, { s: 14, f: F.mono, c: idx === 4 || idx === 5 ? C.amber : C.text });
+  });
+
+  // Comparison Cards: Hallucinated Vector RAG vs MECH-G Verified AST
+  const compY = pan1Y + 340;
+  // Left: Vector RAG Hallucination
+  fill(pan1X + 25, compY, (pan1W - 70) / 2, 330, '#1A1110');
+  strokeRect(pan1X + 25, compY, (pan1W - 70) / 2, 330, C.red, 1.5);
+  drawTag('STANDARD VECTOR RAG (DANGEROUS)', pan1X + 45, compY + 35, C.red);
+  txt('❌ UNCHECKED GENERATIVE OUTPUT', pan1X + 45, compY + 75, { s: 18, f: F.sans, c: C.red, w: 'bold' });
+  txt('"Tighten collar bolts to 55 Nm (Hallucinated from car brake manual)."', pan1X + 45, compY + 120, { s: 16, f: F.sans, c: C.dim });
+  txt('Result: 55 Nm strips aluminum threads on 210-bar manifold.', pan1X + 45, compY + 160, { s: 15, f: F.sans, c: C.dim });
+  txt('CONSEQUENCE: EXPLOSIVE HYDRAULIC DISASTER', pan1X + 45, compY + 200, { s: 16, f: F.mono, c: C.red, w: 'bold' });
+
+  // Right: MECH-G Closed-World Verification
+  const rX = pan1X + 25 + (pan1W - 70) / 2 + 20;
+  fill(rX, compY, (pan1W - 70) / 2, 330, '#0D1A14');
+  strokeRect(rX, compY, (pan1W - 70) / 2, 330, C.green, 2);
+  drawTag('MECH-G DETERMINISTIC CITATION AUDITOR', rX + 20, compY + 35, C.green);
+  txt('✓ 100% MATHEMATICAL AST GROUNDING', rX + 20, compY + 75, { s: 18, f: F.sans, c: C.green, w: 'bold' });
+  txt('Source Node: [DOC: OEM-SOP-WTG-044 §3.2]', rX + 20, compY + 120, { s: 16, f: F.mono, c: C.cyanBright, w: 'bold' });
+  txt('"Tighten M12 collar bolts in star pattern to 35.0 ± 0.5 Nm."', rX + 20, compY + 155, { s: 16, f: F.sans, c: C.text, w: 'bold' });
+  txt('Gasket specification: Viton 90 Shore-A · Star sequence verified.', rX + 20, compY + 190, { s: 15, f: F.sans, c: C.dim });
+  txt('RESULT: 100% PRESSURE INTEGRITY CERTIFIED', rX + 20, compY + 230, { s: 16, f: F.mono, c: C.green, w: 'bold' });
+}
+
+// ── 05: Feature 3 - OSHA LOTO Gate & Multimodal Triage (34.0s - 43.0s) ──
+function renderPitch05(t) {
+  // Left: OSHA 1910.147 LOTO Safety Gate
+  const pan1X = 60, pan1Y = 75, pan1W = 860, pan1H = 710;
+  coverImage(IM.lock, pan1X, pan1Y, pan1W, 360, { fx: 0.25, fy: 0.45 });
+  drawTag('OSHA 1910.147 LOCKOUT/TAGOUT PROTOCOL', pan1X + 20, pan1Y + 35, C.red);
+
+  fill(pan1X, pan1Y + 380, pan1W, 330, C.panelDark);
+  strokeRect(pan1X, pan1Y + 380, pan1W, 330, C.green, 1.5);
+  drawTag('MANDATORY ZERO-ENERGY GATE', pan1X + 25, pan1Y + 415, C.green);
+  txt('Code: frontend/src/pages/SafetyCompliancePage.tsx', pan1X + 25, pan1Y + 445, { s: 13, f: F.mono, c: C.dim });
+
+  const gates = [
+    { label: 'Gate 1: Hydraulic Isolation', status: 'VERIFIED 0 PSI', col: C.green },
+    { label: 'Gate 2: OSHA Red Lockout Clamp', status: 'PADLOCK SNAPPED', col: C.green },
+    { label: 'Gate 3: Digital Signature Pad', status: 'SIGNED: A. VANE #8912', col: C.green }
+  ];
+
+  gates.forEach((g, idx) => {
+    const gy = pan1Y + 480 + idx * 42;
+    txt(`[✓] ${g.label}`, pan1X + 25, gy, { s: 15, f: F.mono, c: C.text, w: 'bold' });
+    txt(g.status, pan1X + 480, gy, { s: 14, f: F.mono, c: g.col, w: 'bold' });
+  });
+  txt('Software physically locks UI wrench steps until safety gate is signed.', pan1X + 25, pan1Y + 625, { s: 14, f: F.sans, c: C.amber });
+
+  // Right: Multimodal Vision & Acoustic Diagnostics
+  const pan2X = 960, pan2Y = 75, pan2W = 900, pan2H = 710;
+  fill(pan2X, pan2Y, pan2W, pan2H, C.panel);
+  strokeRect(pan2X, pan2Y, pan2W, pan2H, C.line);
+  drawTag('MULTIMODAL DIAGNOSTIC ENGINE (VISION + FFT AUDIO)', pan2X + 25, pan2Y + 40, C.cyan);
+  txt('Code: backend/app/services/diagnostic_service.py', pan2X + 25, pan2Y + 70, { s: 13, f: F.mono, c: C.dim });
+
+  // Optical Vision Preview
+  fill(pan2X + 25, pan2Y + 95, pan2W - 50, 260, C.panelDark);
+  strokeRect(pan2X + 25, pan2Y + 95, pan2W - 50, 260, C.lineDim);
+  drawTag('OPTICAL VALVE IDENTIFICATION (GEMMA 4 VISION)', pan2X + 45, pan2Y + 125, C.cyan);
+  txt('INPUT: Camera image from nacelle maintenance drone', pan2X + 45, pan2Y + 160, { s: 14, f: F.sans, c: C.dim });
+  txt('IDENTIFIED: PRV-992-B [Confidence: 98.4%]', pan2X + 45, pan2Y + 195, { s: 18, f: F.mono, c: C.green, w: 'bold' });
+  txt('DEFECT: Hydraulic Viton seal extrusion detected on flange collar', pan2X + 45, pan2Y + 230, { s: 15, f: F.sans, c: C.amber });
+  txt('ACTION: Replace gasket & execute 3-pass torque procedure', pan2X + 45, pan2Y + 265, { s: 15, f: F.sans, c: C.text });
+
+  // Acoustic Telemetry Preview
+  fill(pan2X + 25, pan2Y + 380, pan2W - 50, 290, C.panelDark);
+  strokeRect(pan2X + 25, pan2Y + 380, pan2W - 50, 290, C.amber, 1.5);
+  drawTag('ACOUSTIC FFT SPECTROGRAM TELEMETRY', pan2X + 45, pan2Y + 415, C.amber);
+  txt('MIC SENSOR: Nacelle acoustic probe (48 kHz sample rate)', pan2X + 45, pan2Y + 450, { s: 14, f: F.sans, c: C.dim });
+  txt('ANOMALY PEAK: 1,420 Hz Harmonic Resonance (Bearing Friction)', pan2X + 45, pan2Y + 485, { s: 16, f: F.mono, c: C.amber, w: 'bold' });
+  txt('DIGITAL TORQUE VERIFICATION: 15 Nm → 25 Nm → 35.0 Nm [PASS]', pan2X + 45, pan2Y + 520, { s: 16, f: F.mono, c: C.green, w: 'bold' });
+
+  // Waveform graphic
+  for (let i = 0; i < 40; i++) {
+    const wx = pan2X + 45 + i * 20;
+    const wh = 20 + 35 * Math.sin(i * 0.45 + t * 6);
+    fill(wx, pan2Y + 620 - wh / 2, 12, wh, C.amber);
+  }
+}
+
+// ── 06: Feature 4 - NotebookLM-Style Knowledge Workspace (43.0s - 51.0s) ──
+function renderPitch06(t) {
+  const pan1X = 60, pan1Y = 75, pan1W = 1800, pan1H = 710;
+  fill(pan1X, pan1Y, pan1W, pan1H, C.panel);
+  strokeRect(pan1X, pan1Y, pan1W, pan1H, C.line);
+  drawTag('ENGINEER WORKSPACE: NOTEBOOKLM FLOATING ISLANDS & GRAPH EXPLORER', pan1X + 25, pan1Y + 40, C.cyan);
+  txt('Code: frontend/src/pages/WorkspacePage.tsx · frontend/src/components/workspace/', pan1X + 25, pan1Y + 70, { s: 14, f: F.mono, c: C.dim });
+
+  // Left Column: Source Document Sidebar
+  const col1W = 420;
+  fill(pan1X + 25, pan1Y + 95, col1W, 580, C.panelDark);
+  strokeRect(pan1X + 25, pan1Y + 95, col1W, 580, C.lineDim);
+  drawTag('SOURCE DOCUMENTS (LOCAL OKF)', pan1X + 45, pan1Y + 130, C.dim);
+
+  const docs = [
+    { name: 'SOP-WTG-HYD-044.md', pages: '42 nodes', active: true },
+    { name: 'SCHEMATIC-NACELLE-992.pdf', pages: '18 nodes', active: true },
+    { name: 'OSHA-1910-147-LOTO.md', pages: '12 nodes', active: false },
+    { name: 'TORQUE-TOLERANCE-M12.json', pages: '8 nodes', active: false }
+  ];
+
+  docs.forEach((doc, idx) => {
+    const dy = pan1Y + 160 + idx * 85;
+    fill(pan1X + 45, dy, col1W - 40, 65, doc.active ? 'rgba(6, 182, 212, 0.12)' : C.panel);
+    strokeRect(pan1X + 45, dy, col1W - 40, 65, doc.active ? C.cyan : C.lineDim, 1);
+    txt(doc.name, pan1X + 60, dy + 28, { s: 14, f: F.mono, c: doc.active ? C.text : C.dim, w: 'bold' });
+    txt(`${doc.pages} · Grounded AST`, pan1X + 60, dy + 50, { s: 12, f: F.mono, c: C.cyan });
+  });
+
+  // Center Column: Grounded Chat Workspace
+  const col2X = pan1X + 25 + col1W + 20;
+  const col2W = 740;
+  fill(col2X, pan1Y + 95, col2W, 580, C.panelDark);
+  strokeRect(col2X, pan1Y + 95, col2W, 580, C.lineDim);
+  drawTag('AI CHAT & GROUNDED CITATIONS', col2X + 20, pan1Y + 130, C.cyan);
+
+  // User Message
+  fill(col2X + 20, pan1Y + 160, col2W - 40, 70, C.panel);
+  txt('User: How do I seal leaking valve PRV-992-B under 210 bar?', col2X + 35, pan1Y + 200, { s: 16, f: F.sans, c: C.text, w: '600' });
+
+  // Assistant Streaming Response
+  fill(col2X + 20, pan1Y + 250, col2W - 40, 390, '#111317');
+  strokeRect(col2X + 20, pan1Y + 250, col2W - 40, 390, C.cyan, 1);
+  txt('MECH-G Edge Assistant [Google Gemma 4]:', col2X + 35, pan1Y + 285, { s: 14, f: F.mono, c: C.cyan, w: 'bold' });
+  txt('1. Execute OSHA 1910.147 energy isolation to 0 PSI.', col2X + 35, pan1Y + 325, { s: 16, f: F.sans, c: C.text });
+  txt('2. Replace Viton 90-shore flange gasket on PRV-992-B.', col2X + 35, pan1Y + 365, { s: 16, f: F.sans, c: C.text });
+  txt('3. Tighten M12 bolts in star sequence to 35.0 Nm.', col2X + 35, pan1Y + 405, { s: 16, f: F.sans, c: C.text });
+
+  // Clickable Citation Pill
+  fill(col2X + 35, pan1Y + 440, 380, 40, 'rgba(16, 185, 129, 0.15)');
+  strokeRect(col2X + 35, pan1Y + 440, 380, 40, C.green, 1.5);
+  txt('✓ GROUNDED: [DOC: SOP-WTG-044 §3.2]', col2X + 50, pan1Y + 465, { s: 14, f: F.mono, c: C.green, w: 'bold' });
+
+  // Right Column: Interactive Graph Canvas
+  const col3X = col2X + col2W + 20;
+  const col3W = pan1W - (col1W + col2W + 60);
+  fill(col3X, pan1Y + 95, col3W, 580, C.panelDark);
+  strokeRect(col3X, pan1Y + 95, col3W, 580, C.lineDim);
+  drawTag('@XYFLOW/REACT EXPLORER', col3X + 20, pan1Y + 130, C.amber);
+
+  txt('Interactive canvas', col3X + 20, pan1Y + 180, { s: 15, f: F.sans, c: C.dim });
+  txt('Click any node to zoom,', col3X + 20, pan1Y + 210, { s: 15, f: F.sans, c: C.dim });
+  txt('inspect subcomponents,', col3X + 20, pan1Y + 240, { s: 15, f: F.sans, c: C.dim });
+  txt('or view safety rules.', col3X + 20, pan1Y + 270, { s: 15, f: F.sans, c: C.dim });
+
+  fill(col3X + 20, pan1Y + 340, col3W - 40, 200, C.panel);
+  strokeRect(col3X + 20, pan1Y + 340, col3W - 40, 200, C.cyan, 1);
+  txt('INSPECTOR PANEL', col3X + 35, pan1Y + 375, { s: 13, f: F.mono, c: C.cyan, w: 'bold' });
+  txt('Node: PRV-992-B', col3X + 35, pan1Y + 410, { s: 14, f: F.mono, c: C.text, w: 'bold' });
+  txt('Type: Pressure Relief', col3X + 35, pan1Y + 440, { s: 13, f: F.mono, c: C.dim });
+  txt('Torque: 35.0 Nm', col3X + 35, pan1Y + 470, { s: 13, f: F.mono, c: C.green, w: 'bold' });
+  txt('LOTO Required: YES', col3X + 35, pan1Y + 500, { s: 13, f: F.mono, c: C.amber, w: 'bold' });
+}
+
+// ── 07: Value Verdict & Call to Action (51.0s - 60.0s) ──
+function renderPitch07(t) {
+  const dt = t - 51.0;
+
+  if (dt < 4.0) {
+    // Kinetic Metric Slam
+    drawTag('MEASURED BUSINESS IMPACT & SYSTEM BENCHMARK', 60, 95, C.cyan);
+
+    const metrics = [
+      { num: '84%', label: 'MTTR REDUCTION', sub: 'Mean time to repair slashed from 4.5h to 42m', col: C.green },
+      { num: '< 500ms', label: 'LOCAL GRAPH QUERY', sub: 'Sub-second deterministic retrieval over 12k nodes', col: C.cyan },
+      { num: '100%', label: 'OFFLINE RESILIENCE', sub: 'Zero cloud packets, zero satellite dependency', col: C.amber }
+    ];
+
+    metrics.forEach((m, idx) => {
+      const cx = 60 + idx * 620;
+      const cy = 130;
+      const cw = 580;
+      const ch = 560;
+
+      fill(cx, cy, cw, ch, C.panelDark);
+      strokeRect(cx, cy, cw, ch, m.col, 1.5);
+      drawTag(`BENCHMARK 0${idx + 1}`, cx + 30, cy + 45, m.col);
+
+      txt(m.num, cx + 30, cy + 220, { s: 76, f: F.mono, c: m.col, w: 'bold' });
+      txt(m.label, cx + 30, cy + 290, { s: 26, f: F.sans, c: C.text, w: 'bold' });
+      hair(cx + 30, cy + 330, cx + cw - 30, cy + 330, C.lineDim);
+      txt(m.sub, cx + 30, cy + 380, { s: 18, f: F.sans, c: C.dim });
+    });
+  } else {
+    // 55.0s - 60.0s: Master Call to Action Lockup
+    fill(0, 0, W, H, C.bg);
+
+    // Left: Friendly Mascot
+    coverImage(IM.mascot, 200, 240, 500, 500, { fx: 0.5, fy: 0.35, border: C.cyan });
+
+    // Right: Master Pitch Lockup
+    const tx = 760;
+    txt('MISSION-CRITICAL EDGE INTELLIGENCE', tx, 340, { s: 18, f: F.mono, c: C.cyan, w: 'bold' });
+    txt('MECH-G', tx, 440, { s: 96, f: F.sans, c: C.text, w: '900' });
+    txt('Offline Multimodal Diagnostics & Engineering Knowledge Workspace', tx, 500, { s: 22, f: F.sans, c: C.dim });
+
+    hair(tx, 550, tx + 860, 550, C.line);
+
+    // Repo Box
+    fill(tx, 580, 860, 95, 'rgba(245, 158, 11, 0.12)');
+    strokeRect(tx, 580, 860, 95, C.amber, 2);
+    txt('STAR & CLONE ON GITHUB:', tx + 30, 615, { s: 14, f: F.mono, c: C.amber, w: 'bold' });
+    txt('https://github.com/narain-karti/MECH-G.git', tx + 30, 650, { s: 24, f: F.mono, c: C.text, w: 'bold' });
+
+    txt('APACHE 2.0 OPEN SOURCE · FULL CODEBASE AUDITED · PRODUCTION READY', tx, 715, { s: 14, f: F.mono, c: C.faint });
+  }
+}
+
+// Boot the application
+boot();
+</script>
+</body>
+</html>

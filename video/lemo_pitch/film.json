@@ -1,0 +1,16 @@
+{
+  "title": "MECH-G Architecture & Product Pitch",
+  "style": "executive-pitch",
+  "dur": 60.0,
+  "fps": 24,
+  "sections": {
+    "p01": [0.0, 8.0],
+    "p02": [8.0, 17.0],
+    "p03": [17.0, 26.0],
+    "p04": [26.0, 34.0],
+    "p05": [34.0, 43.0],
+    "p06": [43.0, 51.0],
+    "p07": [51.0, 60.0]
+  },
+  "subtitles": "subtitles_en.srt"
+}

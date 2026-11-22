@@ -1,0 +1,27 @@
+1
+00:00:00,600 --> 00:00:07,500
+In high-stakes industrial fields, cloud AI fails. When a 210-bar hydraulic valve blows a seal at sea, internet does not exist.
+
+2
+00:00:08,200 --> 00:00:16,500
+Enter MECH-G. Powered by Google Gemma 4 running entirely on-device, MECH-G brings deterministic intelligence to the edge with zero cloud dependencies.
+
+3
+00:00:17,200 --> 00:00:25,500
+Under the hood, our Open Knowledge Format compiler transforms complex OEM manuals into an in-memory directed graph, traversing machine topologies in under 500 milliseconds.
+
+4
+00:00:26,200 --> 00:00:33,500
+Safety demands zero hallucinations. Our AST Citation Auditor mathematically verifies every claim and torque specification directly against source nodes before streaming.
+
+5
+00:00:34,200 --> 00:00:42,500
+Before a single bolt is turned, MECH-G enforces mandatory OSHA 1910.147 lockout gates. Combined with multimodal vision and acoustic audio telemetry, repairs are certified safe.
+
+6
+00:00:43,200 --> 00:00:50,500
+The engineer workstation pairs a NotebookLM-style workspace with interactive visual graph exploration, putting verified procedures at the technician's fingertips.
+
+7
+00:00:51,200 --> 00:00:59,200
+84% faster repairs. Completely offline. When seconds count, trust MECH-G. Star and clone today on GitHub!

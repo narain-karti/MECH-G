@@ -1,0 +1,13 @@
+{
+  "title": "The Turbine & The Mascot",
+  "style": "sketchnote",
+  "dur": 48.0,
+  "fps": 24,
+  "sections": {
+    "act1": [0.0, 13.0],
+    "act2": [13.0, 22.0],
+    "act3": [22.0, 36.0],
+    "act4": [36.0, 48.0]
+  },
+  "subtitles": "subtitles_en.srt"
+}
