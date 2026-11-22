@@ -45,6 +45,11 @@ export class DocumentService {
     return await res.json();
   }
 
+  /** Convenience entry point for one-file UI drop zones. */
+  static async uploadDocument(file: File, notebookId?: string): Promise<any> {
+    return this.uploadDocuments([file], notebookId);
+  }
+
   static async recompileDocument(id: string): Promise<any> {
     const res = await fetchWithTimeout(`/api/documents/${id}/recompile`, { method: "POST" });
     if (!res.ok) {

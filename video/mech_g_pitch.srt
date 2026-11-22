@@ -1,19 +1,27 @@
 1
-00:00:00,200 --> 00:00:09,600
-A hundred meters high, a hydraulic valve blows. Zero signal, four thousand manual pages, and thirty thousand dollars an hour downtime.
+00:00:01,200 --> 00:00:07,500
+Welcome to the Frontline Depot! When critical machines blow a seal in the field, every second counts.
 
 2
-00:00:10,000 --> 00:00:19,500
-Generic cloud AI drops safety interlocks and hallucinates fifty-five Newton meters instead of thirty-five—risking catastrophic blowout.
+00:00:08,400 --> 00:00:15,000
+Cloud chatbots choke with zero signal, leaving engineers stranded with massive four-thousand-page manuals.
 
 3
-00:00:20,000 --> 00:00:23,200
-Cloud AI is dead out here. Meet MECH-G.
+00:00:16,200 --> 00:00:21,500
+Meet MECH-G! Your offline AI companion for mission-critical machine repair.
 
 4
-00:00:23,600 --> 00:00:37,000
-Snap: Gemma vision identifies the valve offline. Lock: OSHA safety gate verifies zero energy. Fix: Calibrated thirty-five Newton meters, backed by exact citations.
+00:00:22,200 --> 00:00:27,500
+Step one: Snap! Multimodal vision instantly identifies valve PRV-992-B and flags the leaking seal.
 
 5
-00:00:37,400 --> 00:00:47,000
-Eighty-four percent faster repair. Sub-five-hundred millisecond local graph latency. MECH-G: Mission-critical edge intelligence.
+00:00:28,200 --> 00:00:33,500
+Step two: Lock! OSHA safety gates enforce zero-energy isolation before anyone touches a bolt.
+
+6
+00:00:34,200 --> 00:00:39,500
+Step three: Fix and verify! Calibrated thirty-five newton-meter torque sequence, verified by our local graph.
+
+7
+00:00:40,200 --> 00:00:47,500
+Eighty-four percent faster repairs, completely offline. MECH-G: The frontline engineer's best friend!

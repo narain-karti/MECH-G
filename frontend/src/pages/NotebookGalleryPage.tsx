@@ -80,13 +80,11 @@ export const NotebookGalleryPage: React.FC = () => {
         status: "operational",
       });
 
-      // If user provided files, ingest them
+      // Upload directly into the newly-created notebook. The ingest endpoint
+      // compiles the file to OKF and persists the notebook/document link.
       for (const file of droppedFiles) {
         try {
-          const doc = await DocumentService.uploadDocument(file);
-          if (doc && doc.id) {
-            await NotebookService.linkDocument(created.id, doc.id);
-          }
+          await DocumentService.uploadDocument(file, created.id);
         } catch (uploadErr) {
           console.warn("Failed to attach initial file:", uploadErr);
         }

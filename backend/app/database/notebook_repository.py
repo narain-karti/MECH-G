@@ -215,7 +215,7 @@ class IssueRepository:
                 "SELECT * FROM issues WHERE notebook_id = ? AND status NOT IN ('resolved', 'fixed')", (notebook_id,)
             ).fetchall()
         for row in rows:
-            haystack = f"{row['title']} {row['description']} {row.get('component', '')} {row.get('defect', '')}".lower()
+            haystack = f"{row['title']} {row['description']} {row['component']} {row['defect']}".lower()
             if sum(word in haystack for word in words) >= min(2, len(words)):
                 return dict(row)
         return None

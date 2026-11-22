@@ -48,128 +48,14 @@ mermaid.initialize({
 });
 
 function sanitizeMermaid(raw: string): string {
-  let cleaned = raw
+  // Do not rewrite Mermaid nodes or arrows here. The former sanitizer tried to
+  // infer graph syntax from prose and regularly corrupted valid labels, which
+  // is why diagrams appeared as text. The backend is already instructed to
+  // send isolated Mermaid fences; preserve that source and let Mermaid parse it.
+  return raw
     .replace(/^```(?:mermaid)?\s*/i, "")
     .replace(/```\s*$/, "")
     .trim();
-
-  const validStarts = [
-    "graph ",
-    "flowchart ",
-    "sequenceDiagram",
-    "stateDiagram",
-    "classDiagram",
-    "erDiagram",
-    "gantt",
-    "pie",
-    "gitGraph",
-  ];
-  const hasValidStart = validStarts.some((kw) => cleaned.startsWith(kw));
-  if (!hasValidStart) {
-    cleaned = `graph TD\n${cleaned}`;
-  }
-
-  if (!cleaned.startsWith("graph ") && !cleaned.startsWith("flowchart ")) {
-    return cleaned;
-  }
-
-  const nodeMap = new Map<string, string>();
-  let idCounter = 1;
-
-  const sanitizeLabel = (lbl: string): string => {
-    return lbl
-      .replace(/"/g, "'")
-      .replace(/&/g, "and")
-      .replace(/\[/g, "(")
-      .replace(/\]/g, ")")
-      .trim();
-  };
-
-  const getOrCreateId = (text: string): string => {
-    const cleanText = text.trim();
-    if (!nodeMap.has(cleanText)) {
-      const slug = cleanText.replace(/[^a-zA-Z0-9]/g, "").slice(0, 14) || `node${idCounter}`;
-      nodeMap.set(cleanText, `n_${idCounter}_${slug}`);
-      idCounter++;
-    }
-    return nodeMap.get(cleanText)!;
-  };
-
-  const formatNodePart = (part: string): string => {
-    const s = part.trim();
-    if (!s) return s;
-
-    const bracketMatch = s.match(/^([a-zA-Z0-9_\-]+)\s*\["?(.*?)"?\]$/);
-    if (bracketMatch) {
-      const [, id, label] = bracketMatch;
-      return `${id}["${sanitizeLabel(label)}"]`;
-    }
-
-    const roundMatch = s.match(/^([a-zA-Z0-9_\-]+)\s*\("?(.*?)"?"?\)$/);
-    if (roundMatch) {
-      const [, id, label] = roundMatch;
-      return `${id}("${sanitizeLabel(label)}")`;
-    }
-
-    const curlyMatch = s.match(/^([a-zA-Z0-9_\-]+)\s*\{"?(.*?)"?\}$/);
-    if (curlyMatch) {
-      const [, id, label] = curlyMatch;
-      return `${id}{"${sanitizeLabel(label)}"}`;
-    }
-
-    if (s.startsWith('"') && s.endsWith('"') && s.length >= 2) {
-      const label = s.slice(1, -1);
-      const id = getOrCreateId(label);
-      return `${id}["${sanitizeLabel(label)}"]`;
-    }
-
-    if (/^[a-zA-Z0-9_\-]+$/.test(s)) {
-      return s;
-    }
-
-    const id = getOrCreateId(s);
-    return `${id}["${sanitizeLabel(s)}"]`;
-  };
-
-  const lines = cleaned.split("\n");
-  const arrowRegex = /(\s*(?:-->\|.*?\||--\s*.*?\s*-->|-->|->|==>|-\.->|---|--)\s*)/;
-
-  const transformedLines = lines.map((line) => {
-    const trimmed = line.trim();
-    if (
-      !trimmed ||
-      trimmed.startsWith("graph ") ||
-      trimmed.startsWith("flowchart ") ||
-      trimmed.startsWith("subgraph ") ||
-      trimmed === "end" ||
-      trimmed.startsWith("classDef ") ||
-      trimmed.startsWith("class ") ||
-      trimmed.startsWith("style ") ||
-      trimmed.startsWith("%%")
-    ) {
-      return line;
-    }
-
-    const parts = line.split(arrowRegex);
-    if (parts.length >= 3) {
-      return parts
-        .map((p, idx) => {
-          if (idx % 2 === 1) {
-            if (p.trim() === "->") return p.replace("->", "-->");
-            return p;
-          }
-          const leadingWs = p.match(/^\s*/)?.[0] || "";
-          const trailingWs = p.match(/\s*$/)?.[0] || "";
-          const formatted = formatNodePart(p);
-          return leadingWs + formatted + trailingWs;
-        })
-        .join("");
-    }
-
-    return formatNodePart(line);
-  });
-
-  return transformedLines.join("\n");
 }
 
 interface MermaidRendererProps {
@@ -192,7 +78,8 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ code, isStreaming = f
     if (containerRef.current) {
       const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
       mermaid
-        .render(id, cleanCode)
+        .parse(cleanCode, { suppressErrors: true })
+        .then(() => mermaid.render(id, cleanCode))
         .then(({ svg }) => {
           if (isMounted && containerRef.current) {
             containerRef.current.innerHTML = svg;

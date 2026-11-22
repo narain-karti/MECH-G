@@ -35,7 +35,13 @@ class IssueService:
 
         title = cls._title(user_text)
         severity = "high" if any(term in normalized for term in ("safety", "pressure", "arc", "critical", "emergency")) else "medium"
-        IssueRepository.create(notebook_id, title, user_text.strip(), severity, source_message_id)
+        IssueRepository.create(
+            notebook_id=notebook_id,
+            title=title,
+            description=user_text.strip(),
+            severity=severity,
+            source_message_id=source_message_id,
+        )
 
     @staticmethod
     def _keywords(text: str) -> list[str]:
