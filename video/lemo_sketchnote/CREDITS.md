@@ -1,15 +1,15 @@
-# Credits & Production Notes
+# CREDITS & LICENSES: MECH-G Sketchnote Pitch Film
 
-**Project**: The Turbine & The Mascot (A Sketchnote Adventure)  
-**Style**: Sketchnote (`sketchnote`) — Lemo-Opuscar Library  
-**Target Duration**: 48.000s @ 24 fps CFR (1,152 frames)  
-**Resolution**: 1920×1080 Full HD  
+## Production & Engine Attribution
+* **Style Engine**: Sketchnote by Lemo-Opuscar (`@lucasmarkes/hairline` & LemoLab Canvas 2D engine)
+* **Director & Motion Author**: Antigravity Autonomous Agent System
+* **Project**: MECH-G Offline Frontline Diagnostic Intelligence
 
-### Cast & Voice Synthesis
-- **Alex (Field Engineer)**: ElevenLabs Neural TTS (Laura `FGY2WhTYpPnrIDTdsKH5`)
-- **MECH-G (The Helpful Mascot)**: ElevenLabs Neural TTS (Brian `nPczCjzI2devNBz1zQrb`)
+## Typography (SIL Open Font License 1.1)
+* **Kalam Bold**: Designed by Lipi Raval and Jonny Pinhorn, Indian Type Foundry. Licensed under SIL Open Font License 1.1.
+* **Patrick Hand**: Designed by Rodrigo Fuenzalida. Licensed under SIL Open Font License 1.1.
 
-### Production Engine
-- **Visuals**: HTML5 Canvas 2D with dynamic stroke-by-stroke fineliner jitter, multi-layer marker multiply blending, dot-grid rendering, and smooth camera interpolation.
-- **Audio & SFX**: Procedural pen scratches, marker sweeps, mechanical ratchets, spring boings, and acoustic marimba score synthesized via Python (`numpy`, `scipy`).
-- **Rendering**: Playwright headless browser rendering via `lemo-opuscar` core tools.
+## Audio & Synthesis
+* **Vocal Generation**: Microsoft Edge Neural TTS (`en-US-ChristopherNeural`), high-fidelity natural prosody.
+* **Foley & Sound Design**: Procedural Canvas-linked physical acoustics (band-passed noise filters, mechanical ratchet synthesis, resonance modeling) by MECH-G Audio Engine.
+* **Musical Composition**: Algorithmic plucked marimba & pizzicato chamber acoustic suite at 120.0 BPM.

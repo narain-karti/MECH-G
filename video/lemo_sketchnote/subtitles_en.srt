@@ -1,0 +1,23 @@
+1
+00:00:00,800 --> 00:00:06,404
+A hundred meters offshore, two hundred bar of oil is rupturing a turbine valve.
+
+2
+00:00:07,200 --> 00:00:13,236
+Cloud AI gives a timeout. At two hundred bar, latency is fatal.
+
+3
+00:00:13,800 --> 00:00:20,124
+MECH-G runs offline on Gemma 4, traversing the machine graph in five hundred milliseconds.
+
+4
+00:00:21,000 --> 00:00:29,316
+Step one: SNAP defect. Step two: LOCK. The OSHA safety padlock clamps shut.
+
+5
+00:00:30,200 --> 00:00:40,436
+Step three: FIX. Star torque pass: fifteen, twenty-five, thirty-five Newton-meters. Green LEDs verified.
+
+6
+00:00:41,200 --> 00:00:51,800
+Eighty-four percent faster. Zero cloud risk. Zero casualties. MECH-G: Frontline intelligence for critical machines.

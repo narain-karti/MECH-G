@@ -1,0 +1,703 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MECH-G: The 35 Newton-Meter Rule (Sketchnote)</title>
+<style>
+@font-face { font-family: KB; src: url(fonts/Kalam-Bold.ttf); font-display: block; }
+@font-face { font-family: PH; src: url(fonts/PatrickHand-Regular.ttf); font-display: block; }
+html, body { margin: 0; padding: 0; background: #fbfaf6; overflow: hidden; width: 100%; height: 100%; }
+canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+
+<script>
+const W = 1920, H = 1080, FPS = 24, TOTAL_DUR = 52.0;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const OC = document.createElement('canvas'); OC.width = W; OC.height = H; const octx = OC.getContext('2d');
+
+// ---------- Palette (Strict Sketchnote Invariants) ----------
+const PL = {
+  paper: '#fbfaf6',
+  ink: [30, 30, 34],
+  ink2: '#5b5852',
+  acc: [255, 205, 40],        // Yellow Accent Thread
+  accD: [245, 170, 0],
+  accS: [232, 140, 0],
+  shd: [100, 100, 110],       // Light grey volume
+  shd2: [80, 80, 92],         // Medium drop shadows
+  shd3: [52, 52, 64],         // Dark crevices
+  dot: [150, 144, 132]
+};
+
+const rgba = (c, a) => `rgba(${c.map(v => Math.round(v)).join(',')},${a})`;
+const hex = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+const PAPER = PL.paper, DOT = rgba(PL.dot, 0.40);
+const INK = hex(PL.ink), INK2 = PL.ink2;
+const YEL = rgba(PL.acc, 0.82), YELD = rgba(PL.accD, 0.95), YELS = rgba(PL.accS, 0.25);
+const GRY = rgba(PL.shd, 0.16), GRY2 = rgba(PL.shd2, 0.28), GRYD = rgba(PL.shd3, 0.45);
+const TAU = Math.PI * 2;
+
+// ---------- Seeded Randomness & Boil ----------
+let SEED = 42, BOIL = 0;
+function rnd() {
+  SEED |= 0; SEED = SEED + 0x6D2B79F5 | 0;
+  let t = Math.imul(SEED ^ SEED >>> 15, 1 | SEED);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+const rr = (a, b) => a + (b - a) * rnd();
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const eio = t => { t = clamp(t); return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+const eo = t => 1 - Math.pow(1 - clamp(t), 3);
+const BO = [0, 1, -0.8]; // 3-frame boil cycle on twos
+
+// ---------- Geometry Helpers ----------
+function resample(pts, step = 3) {
+  const out = [pts[0].slice()];
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / step));
+    for (let k = 1; k <= n; k++) out.push([x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n]);
+  }
+  return out;
+}
+function plen(pts) { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return s; }
+function noiseFn(amp) {
+  const ks = [[amp, rr(0.003, 0.008), rr(0, TAU), rr(0.35, 0.7)], [amp * 0.5, rr(0.012, 0.022), rr(0, TAU), rr(0.35, 0.7)], [amp * 0.22, rr(0.035, 0.06), rr(0, TAU), rr(0.35, 0.7)]];
+  const b = BO[BOIL];
+  return s => ks.reduce((a, [A, f, p, d]) => a + A * Math.sin(f * s + p + d * b), 0);
+}
+function jitter(pts, amp) {
+  const P = resample(pts, 3), n = noiseFn(amp), out = []; let s = 0;
+  for (let i = 0; i < P.length; i++) {
+    if (i) s += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
+    const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)];
+    let tx = b[0] - a[0], ty = b[1] - a[1]; const L = Math.hypot(tx, ty) || 1; tx /= L; ty /= L;
+    const d = n(s); out.push([P[i][0] - ty * d, P[i][1] + tx * d]);
+  }
+  return out;
+}
+const line = (x1, y1, x2, y2) => [[x1, y1], [x2, y2]];
+function ell(cx, cy, rx, ry, a0 = 0, a1 = TAU, n = 70, rot = 0) {
+  const p = [], c = Math.cos(rot), s = Math.sin(rot);
+  for (let i = 0; i <= n; i++) {
+    const a = a0 + (a1 - a0) * i / n, x = rx * Math.cos(a), y = ry * Math.sin(a);
+    p.push([cx + x * c - y * s, cy + x * s + y * c]);
+  }
+  return p;
+}
+function rrect(x, y, w, h, r) {
+  const p = [];
+  const arc = (cx, cy, a0) => { for (let i = 0; i <= 8; i++) { const a = a0 + Math.PI / 2 * i / 8; p.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } };
+  arc(x + w - r, y + r, -Math.PI / 2); arc(x + w - r, y + h - r, 0); arc(x + r, y + h - r, Math.PI / 2); arc(x + r, y + r, Math.PI);
+  return p;
+}
+function bez(p0, p1, p2, p3, n = 36) {
+  const o = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, u = 1 - t;
+    o.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+            u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
+  }
+  return o;
+}
+const shift = (pts, dx, dy) => pts.map(([x, y]) => [x + dx, y + dy]);
+function hexPts(cx, cy, r, rot = 0) {
+  const p = [];
+  for (let i = 0; i < 6; i++) { const a = rot + i / 6 * TAU; p.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+  return p;
+}
+function pathOf(pts, close = true) {
+  const p = new Path2D(); p.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) p.lineTo(pts[i][0], pts[i][1]);
+  if (close) p.closePath(); return p;
+}
+function bbox(pts) {
+  let a = 1e9, b = 1e9, c = -1e9, d = -1e9;
+  for (const [x, y] of pts) { a = Math.min(a, x); b = Math.min(b, y); c = Math.max(c, x); d = Math.max(d, y); }
+  return [a, b, c, d];
+}
+
+// ---------- Fineliner Ink Engine ----------
+function inkDraw(pts, o, prog) {
+  let { w = 3, amp = 1.4, passes = 2, col = INK, closed = false, alpha = 1, dash = null } = o;
+  w *= 1.15; let base;
+  if (closed) {
+    base = resample(pts.concat([pts[0]]), 3);
+    const st = Math.floor(rr(0, base.length)); base = base.slice(st).concat(base.slice(1, st + 1));
+    base = base.concat(base.slice(1, 2 + Math.floor(base.length * rr(0.02, 0.05))));
+  } else base = resample(pts, 3);
+  ctx.save(); ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (let p = 0; p < passes; p++) {
+    const P = jitter(base, amp * (p ? 1.35 : 1)); const n = Math.max(2, Math.floor(P.length * prog));
+    const wn = noiseFn(0.22); ctx.globalAlpha = alpha * (p ? 0.48 : 0.94);
+    let s = 0;
+    for (let i = 0; i < n - 1; i += 6) {
+      let on = true;
+      if (dash) on = (s % (dash[0] + dash[1])) < dash[0];
+      const end = Math.min(n - 1, i + 6);
+      for (let j = i + 1; j <= end; j++) s += Math.hypot(P[j][0] - P[j - 1][0], P[j][1] - P[j - 1][1]);
+      if (!on) continue;
+      ctx.beginPath(); ctx.moveTo(P[i][0], P[i][1]); for (let j = i + 1; j <= end; j++) ctx.lineTo(P[j][0], P[j][1]);
+      ctx.lineWidth = w * (p ? 0.62 : 1) * (1 + wn(i * 3)); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// ---------- Multiply Grey / Yellow Marker Engine ----------
+function markerDraw(clips, o, prog) {
+  const { col = GRY, w = 18, ang = -0.55, gap = 0.62, amp = 2.0, edge = true, op = 'multiply' } = o;
+  const region = jitter(clips[0].concat([clips[0][0]]), amp);
+  const [x0, y0, x1, y1] = bbox(region), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, R = Math.hypot(x1 - x0, y1 - y0) / 2 + w;
+  const strokes = []; for (let o2 = -R; o2 < R; o2 += w * gap * rr(0.85, 1.15)) strokes.push([o2, w * rr(0.9, 1.08), rr(-4, 4), rr(-6, 6), rr(-6, 6), rr(-2, 2)]);
+  ctx.save();
+  ctx.clip(pathOf(region));
+  if (clips.length > 1) { const p = pathOf(region); for (let i = 1; i < clips.length; i++) p.addPath(pathOf(clips[i])); ctx.clip(p, 'evenodd'); }
+  ctx.globalCompositeOperation = op; ctx.strokeStyle = col; ctx.lineCap = 'round';
+  ctx.translate(cx, cy); ctx.rotate(ang);
+  const stop = -R + 2 * R * prog;
+  for (const [o2, lw, bow, a, b, c] of strokes) {
+    if (o2 >= stop) break;
+    ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(-R + a, o2); ctx.quadraticCurveTo(0, o2 + bow, R + b, o2 + c); ctx.stroke();
+  }
+  ctx.restore();
+  if (edge && prog >= 1) { ctx.save(); ctx.clip(pathOf(region)); ctx.globalCompositeOperation = 'multiply'; ctx.strokeStyle = col; ctx.globalAlpha = 0.40; ctx.lineWidth = 3.5; ctx.stroke(pathOf(region)); ctx.restore(); }
+}
+function mstrokeDraw(pts, o, prog) {
+  const { col = YEL, w = 8, amp = 1 } = o; const P = jitter(pts, amp); const n = Math.max(2, Math.ceil(P.length * prog));
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.stroke(pathOf(P.slice(0, n), false)); ctx.restore();
+}
+
+// ---------- Hand Lettering Typography Engine ----------
+let GLY = null;
+function textLayout(s, x, y, size, o = {}) {
+  const { f = 'PH', align = 'left', jit = 1, sp = 0.98, rot = 0 } = o;
+  ctx.save(); ctx.font = `${size}px ${f}`;
+  const ch = [...s], ws = ch.map(c => ctx.measureText(c).width * sp); ctx.restore();
+  const tot = ws.reduce((a, b) => a + b, 0);
+  let cx = align === 'center' ? -tot / 2 : align === 'right' ? -tot : 0;
+  const G = GLY[f] || GLY['PH'], chars = []; let L = 0;
+  ch.forEach((c, i) => {
+    const dy = rr(-1, 1) * jit * size * 0.03, r = rr(-1, 1) * jit * 0.04, k = rr(-1, 1);
+    const sk = (G.g[c] || []).map(a => { const P = []; for (let j = 0; j < a.length; j += 2) P.push([a[j] * size, a[j + 1] * size]); return P; });
+    const lens = sk.map(plen); const len = lens.reduce((a, b) => a + b, 0) + sk.length * size * 0.12;
+    chars.push({ c, ox: cx, dy, r, sk, lens, len, L0: L }); L += len;
+    cx += ws[i] * (1 + k * 0.02);
+  });
+  return { s, x, y, size, f, rot, chars, L, hw: (G.hw || 0.15) * size, tot, col: o.col || INK };
+}
+function textDraw(T, prog) {
+  const target = prog * T.L;
+  ctx.save(); ctx.translate(T.x, T.y); ctx.rotate(T.rot);
+  ctx.font = `${T.size}px ${T.f}`; ctx.fillStyle = T.col; ctx.textBaseline = 'alphabetic';
+  for (const C of T.chars) {
+    if (C.L0 >= target) break;
+    const part = target - C.L0;
+    ctx.save(); ctx.translate(C.ox, C.dy); ctx.rotate(C.r);
+    if (part >= C.len || !C.sk.length) { ctx.fillText(C.c, 0, 0); ctx.restore(); continue; }
+    
+    const m = ctx.getTransform();
+    octx.setTransform(1, 0, 0, 1, 0, 0); octx.clearRect(0, 0, W, H);
+    octx.setTransform(m); octx.font = ctx.font; octx.fillStyle = T.col; octx.textBaseline = 'alphabetic';
+    octx.fillText(C.c, 0, 0);
+    octx.globalCompositeOperation = 'destination-in'; octx.lineCap = 'round'; octx.lineJoin = 'round'; octx.lineWidth = T.hw * 2.8 + 1.5; octx.strokeStyle = '#000';
+    let left = part;
+    octx.beginPath();
+    for (let k = 0; k < C.sk.length && left > 0; k++) {
+      const P = C.sk[k]; octx.moveTo(P[0][0], P[0][1]); if (P.length === 1) octx.lineTo(P[0][0] + 0.1, P[0][1]);
+      for (let j = 1; j < P.length && left > 0; j++) {
+        const d = Math.hypot(P[j][0] - P[j - 1][0], P[j][1] - P[j - 1][1]);
+        if (d <= left) { octx.lineTo(P[j][0], P[j][1]); left -= d; }
+        else { const u = left / d; octx.lineTo(P[j - 1][0] + (P[j][0] - P[j - 1][0]) * u, P[j - 1][1] + (P[j][1] - P[j - 1][1]) * u); left = 0; }
+      }
+      left -= T.size * 0.12;
+    }
+    octx.stroke(); octx.globalCompositeOperation = 'source-over';
+    ctx.restore(); ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(OC, 0, 0); ctx.restore();
+  }
+  ctx.restore();
+}
+
+// ---------- Timeline & Registration ----------
+const EL = [];
+let BSEED = 2000;
+function addEl(t0, d, kind, draw, wx) {
+  EL.push({ t0, d: Math.max(d, 1 / FPS), kind, draw, seed: (BSEED += 7919), wx });
+  return t0 + d;
+}
+const cen = pts => { const b = bbox(pts); return (b[0] + b[2]) / 2; };
+const INK_ = (pts, o, t0, d) => addEl(t0, d, 'pen', p => inkDraw(pts, o, p), cen(pts));
+const MRK = (clips, o, t0, d) => addEl(t0, d, 'marker', p => markerDraw(clips, o, p), cen(clips[0]));
+const MST = (pts, o, t0, d) => addEl(t0, d, 'marker', p => mstrokeDraw(pts, o, p), cen(pts));
+const FILL = (pts, t0) => addEl(t0, 0, 'fill', () => { ctx.save(); ctx.fillStyle = PAPER; ctx.fill(pathOf(pts)); ctx.restore(); }, cen(pts));
+function TXT(s, x, y, size, o, t0, d) {
+  const T = textLayout(s, x, y, size, o);
+  return addEl(t0, d == null ? Math.max(0.2, T.L / 1800) : d, 'write', p => textDraw(T, p), x + (o.align === 'center' ? 0 : T.tot / 2));
+}
+
+// Composite Helpers
+function dropShadow(pts, dx, dy, t0, d = 0.12, o = {}) { MRK([shift(pts, dx, dy), pts], { col: GRY2, w: 12, ...o }, t0, d); }
+function box(x, y, w, h, t0, d = 0.35) {
+  const p = rrect(x, y, w, h, 24);
+  dropShadow(p, 9, 10, t0 + d * 0.9);
+  FILL(p, t0);
+  return INK_(p, { closed: true, w: 3.2, amp: 1.4 }, t0, d) + 0.1;
+}
+function ribbon(cx, cy, w, h, label, size, t0, o = {}) {
+  const { fill = YEL, arc = 3, f = 'KB', d = 0.35 } = o;
+  const dy = h * 0.34, tl = h * 0.95;
+  for (const sd of [-1, 1]) {
+    const xe = cx + sd * w / 2;
+    const tp = [[xe - sd * h * 0.4, cy - h / 2 + dy], [xe + sd * tl, cy - h / 2 + dy], [xe + sd * (tl - h * 0.36), cy + dy], [xe + sd * tl, cy + h / 2 + dy], [xe - sd * h * 0.4, cy + h / 2 + dy]];
+    FILL(tp, t0 + d * 0.5); MRK([tp], { col: GRY2, w: 14, ang: 0.9 }, t0 + d * 0.7, d * 0.3);
+    INK_(tp, { closed: true, w: 2.8, amp: 0.9 }, t0 + d * 0.5, d * 0.35);
+    const fold = [[xe, cy + h / 2 - 2], [xe, cy + h / 2 + dy], [xe - sd * h * 0.4, cy + h / 2 + dy]];
+    MRK([fold], { col: GRYD, w: 8, edge: false }, t0 + d * 0.8, d * 0.2);
+  }
+  const body = []; const N = 40;
+  for (let i = 0; i <= N; i++) { const u = i / N; body.push([cx - w / 2 + w * u, cy - h / 2 - arc * Math.sin(Math.PI * u)]); }
+  for (let i = N; i >= 0; i--) { const u = i / N; body.push([cx - w / 2 + w * u, cy + h / 2 - arc * Math.sin(Math.PI * u)]); }
+  FILL(body, t0);
+  if (fill) MRK([body], { col: fill, w: 20 }, t0 + d * 0.55, d * 0.45);
+  INK_(body, { closed: true, w: 3.2, amp: 1 }, t0, d * 0.6);
+  let end = t0 + d;
+  if (label) end = TXT(label, cx, cy + size * 0.36 - arc, size, { f, align: 'center', jit: 0.7 }, t0 + d * 0.8, o.td);
+  return end;
+}
+function badge(cx, cy, w, h, text1, text2, t0) {
+  const p = rrect(cx - w / 2, cy - h / 2, w, h, 16);
+  dropShadow(p, 6, 7, t0 + 0.1);
+  FILL(p, t0);
+  MRK([p], { col: YEL, w: 16 }, t0 + 0.1, 0.2);
+  INK_(p, { closed: true, w: 2.8, amp: 0.9 }, t0, 0.2);
+  TXT(text1, cx, cy - 6, 28, { f: 'KB', align: 'center' }, t0 + 0.2, 0.2);
+  if (text2) TXT(text2, cx, cy + 22, 18, { f: 'PH', align: 'center', col: INK2 }, t0 + 0.35, 0.15);
+  return t0 + 0.5;
+}
+
+// ---------- Dot Grid Background ----------
+function drawDotGrid() {
+  ctx.save();
+  ctx.fillStyle = DOT;
+  const step = 26;
+  const startX = -1000, endX = 3000, startY = -1000, endY = 2200;
+  for (let x = startX; x <= endX; x += step) {
+    for (let y = startY; y <= endY; y += step) {
+      ctx.beginPath();
+      ctx.arc(x, y, 1.25, 0, TAU);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+// ---------- Build Complete Sketchnote Composition ----------
+function buildPoster() {
+  // 1. TOP HEADER (Climax Poster Title)
+  ribbon(960, 68, 860, 56, 'MECH-G: FRONTLINE DIAGNOSTIC INTELLIGENCE', 34, 41.5, { fill: YEL, arc: 4 });
+  TXT('OFFLINE-FIRST MULTIMODAL REASONING ON GOOGLE GEMMA 4', 960, 120, 22, { f: 'PH', align: 'center', col: INK2 }, 42.2, 0.5);
+
+  // -------------------------------------------------------------
+  // ZONE 1: TOP-LEFT (The Rupture & Cloud Latency) [0.0s - 13.5s]
+  // -------------------------------------------------------------
+  box(70, 145, 530, 345, 0.2, 0.45);
+  ribbon(335, 145, 360, 38, 'OFFSHORE TURBINE #4', 22, 0.4, { fill: GRY2 });
+  TXT('210-BAR HYDRAULIC LOOP RUPTURE', 335, 202, 21, { f: 'KB', align: 'center' }, 0.8, 0.4);
+
+  // The Ruptured Valve PRV-992-B Body (widened for perfect text clearance)
+  const valveBody = rrect(180, 240, 175, 95, 16);
+  FILL(valveBody, 1.1);
+  MRK([valveBody], { col: GRY, w: 14 }, 1.3, 0.2);
+  INK_(valveBody, { closed: true, w: 3, amp: 1.0 }, 1.1, 0.3);
+  TXT('VALVE PRV-992-B', 260, 296, 20, { f: 'KB', align: 'center' }, 1.5, 0.3);
+
+  // Ruptured O-ring slit & High-Pressure Oil Spray (The Yellow Thread Begins!)
+  const slit = ell(355, 285, 16, 9, 0, TAU, 30, 0.3);
+  FILL(slit, 1.9);
+  MRK([slit], { col: YELD, w: 8 }, 2.0, 0.1);
+  INK_(slit, { closed: true, w: 2.5, amp: 0.5 }, 1.9, 0.15);
+
+  // Spray jet streaks in yellow accent
+  const jet1 = bez([355, 285], [410, 260], [460, 240], [510, 230]);
+  const jet2 = bez([355, 285], [420, 288], [480, 292], [530, 295]);
+  const jet3 = bez([355, 285], [410, 315], [460, 335], [510, 350]);
+  MST(jet1, { col: YEL, w: 6 }, 2.2, 0.2);
+  MST(jet2, { col: YELD, w: 8 }, 2.3, 0.2);
+  MST(jet3, { col: YEL, w: 6 }, 2.4, 0.2);
+
+  // Pressure Gauge pinned at 210 BAR
+  const gauge = ell(130, 335, 34, 34);
+  FILL(gauge, 2.7);
+  MRK([gauge], { col: GRY, w: 10 }, 2.9, 0.15);
+  INK_(gauge, { closed: true, w: 2.8, amp: 0.6 }, 2.7, 0.25);
+  INK_(line(130, 335, 154, 315), { w: 3.5, col: INK, amp: 0.2 }, 3.1, 0.1);
+  TXT('210 BAR', 130, 388, 16, { f: 'KB', align: 'center', col: INK }, 3.2, 0.2);
+
+  // Cloud AI 504 Gateway Timeout Box (7.2s - 13.0s)
+  const cloudPts = bez([190, 400], [190, 370], [250, 360], [290, 375])
+    .concat(bez([290, 375], [330, 355], [390, 360], [410, 390]))
+    .concat(bez([410, 390], [460, 390], [470, 420], [430, 435]))
+    .concat(bez([430, 435], [400, 445], [230, 445], [200, 425]));
+  FILL(cloudPts, 7.3);
+  INK_(cloudPts, { closed: true, w: 2.4, amp: 1.1, dash: [8, 6], col: INK2 }, 7.4, 0.35);
+  TXT('CLOUD AI: 504 GATEWAY TIMEOUT', 330, 396, 18, { f: 'KB', align: 'center', col: INK2 }, 7.8, 0.35);
+  TXT('ZERO OFFLINE RECEPTION AT 100M ELEVATION', 330, 422, 14, { f: 'PH', align: 'center', col: INK2 }, 8.3, 0.35);
+  
+  // Heavy Hand-Drawn "X" cross out
+  INK_(line(220, 380, 430, 435), { w: 4.2, col: '#8a2020', amp: 0.7 }, 8.8, 0.2);
+  INK_(line(430, 380, 220, 435), { w: 4.2, col: '#8a2020', amp: 0.7 }, 9.0, 0.2);
+  TXT('AT 200 BAR, LATENCY IS FATAL', 335, 468, 20, { f: 'KB', align: 'center', col: INK }, 9.8, 0.4);
+
+  // -------------------------------------------------------------
+  // ZONE 2: TOP-RIGHT (MECH-G Edge Core & OKF Graph) [13.8s - 21.0s]
+  // -------------------------------------------------------------
+  box(630, 145, 1220, 345, 13.8, 0.45);
+  ribbon(1240, 145, 520, 38, 'ON-DEVICE OKF KNOWLEDGE GRAPH', 22, 14.1, { fill: YEL });
+  TXT('RUNNING LOCALLY ON GOOGLE GEMMA 4 (26B QUANTIZED)', 1240, 202, 19, { f: 'PH', align: 'center', col: INK2 }, 14.5, 0.4);
+
+  // Graph Nodes
+  function graphNode(x, y, label, sub, t0, isTarget = false) {
+    const p = rrect(x - 85, y - 34, 170, 68, 14);
+    dropShadow(p, 6, 6, t0 + 0.1);
+    FILL(p, t0);
+    if (isTarget) MRK([p], { col: YEL, w: 14 }, t0 + 0.15, 0.15);
+    else MRK([p], { col: GRY, w: 12 }, t0 + 0.1, 0.15);
+    INK_(p, { closed: true, w: 2.8, amp: 0.8 }, t0, 0.2);
+    TXT(label, x, y - 2, 20, { f: 'KB', align: 'center' }, t0 + 0.15, 0.2);
+    if (sub) TXT(sub, x, y + 20, 15, { f: 'PH', align: 'center', col: INK2 }, t0 + 0.25, 0.15);
+    return t0 + 0.4;
+  }
+
+  // 5 Nodes across the 1220px box
+  graphNode(740, 310, 'NACELLE #4', 'Vestas V112', 14.8);
+  graphNode(980, 265, 'HYDRAULIC SKID', 'Loop A (210 bar)', 15.4);
+  graphNode(1220, 320, 'VALVE PRV-992-B', 'Defect Located', 16.0, true);
+  graphNode(1460, 265, 'M12 FLANGE', 'Part 992-04-B', 16.6);
+  graphNode(1700, 320, '35.0 Nm SPEC', 'AST Verified', 17.2, true);
+
+  // Connecting Graph Edges with Yellow Marker Glow
+  function graphEdge(x1, y1, x2, y2, edgeLabel, t0) {
+    const p = bez([x1, y1], [(x1 + x2) / 2, (y1 + y2) / 2 - 18], [(x1 + x2) / 2, (y1 + y2) / 2 + 18], [x2, y2]);
+    MST(p, { col: YEL, w: 10 }, t0, 0.2);
+    INK_(p, { w: 2.6, amp: 0.6 }, t0, 0.2);
+    const ang = Math.atan2(y2 - y1, x2 - x1);
+    INK_([[x2 - 15 * Math.cos(ang - 0.4), y2 - 15 * Math.sin(ang - 0.4)], [x2, y2], [x2 - 15 * Math.cos(ang + 0.4), y2 - 15 * Math.sin(ang + 0.4)]], { w: 2.6, amp: 0.3 }, t0 + 0.15, 0.08);
+    TXT(edgeLabel, (x1 + x2) / 2, (y1 + y2) / 2 - 10, 15, { f: 'PH', align: 'center', col: INK2 }, t0 + 0.1, 0.2);
+  }
+
+  graphEdge(825, 310, 895, 275, 'feeds', 15.6);
+  graphEdge(1065, 275, 1135, 315, 'monitors', 16.2);
+  graphEdge(1305, 320, 1375, 275, 'bolted_to', 16.8);
+  graphEdge(1545, 275, 1615, 315, 'requires_spec', 17.4);
+
+  TXT('< 500ms IN-MEMORY GRAPH RESOLUTION', 1240, 440, 23, { f: 'KB', align: 'center', col: INK }, 18.2, 0.45);
+
+  // -------------------------------------------------------------
+  // ZONE 3: BOTTOM-LEFT (Step 1: SNAP & Step 2: LOCK) [21.0s - 30.2s]
+  // -------------------------------------------------------------
+  box(70, 520, 840, 335, 21.0, 0.45);
+  ribbon(490, 520, 460, 38, 'FRONTLINE INTERLOCK PROTOCOL', 22, 21.3, { fill: GRY2 });
+
+  // Step 1: SNAP (Camera Viewfinder & Defect Confirmation)
+  const snapBox = rrect(100, 565, 360, 265, 14);
+  FILL(snapBox, 21.8);
+  MRK([snapBox], { col: GRY, w: 12 }, 22.0, 0.2);
+  INK_(snapBox, { closed: true, w: 2.6, amp: 0.8 }, 21.8, 0.3);
+  TXT('STEP 1: SNAP', 280, 598, 24, { f: 'KB', align: 'center' }, 22.2, 0.25);
+  TXT('MULTIMODAL VISION DEFECT LOCK', 280, 626, 17, { f: 'PH', align: 'center', col: INK2 }, 22.5, 0.25);
+
+  // Viewfinder Reticle
+  const reticle = rrect(190, 650, 180, 120, 10);
+  INK_(reticle, { closed: true, w: 2.2, dash: [10, 8], amp: 0.4 }, 22.9, 0.25);
+  const cLen = 16;
+  INK_([[190, 650 + cLen], [190, 650], [190 + cLen, 650]], { w: 3.2, amp: 0.2 }, 23.2, 0.08);
+  INK_([[370 - cLen, 650], [370, 650], [370, 650 + cLen]], { w: 3.2, amp: 0.2 }, 23.3, 0.08);
+  INK_([[190, 770 - cLen], [190, 770], [190 + cLen, 770]], { w: 3.2, amp: 0.2 }, 23.4, 0.08);
+  INK_([[370 - cLen, 770], [370, 770], [370, 770 - cLen]], { w: 3.2, amp: 0.2 }, 23.5, 0.08);
+
+  // Extruded Viton Seal inside reticle
+  const defectSeal = ell(280, 710, 40, 20, 0, TAU, 30, -0.2);
+  MRK([defectSeal], { col: YEL, w: 10 }, 23.8, 0.15);
+  INK_(defectSeal, { closed: true, w: 2.5, amp: 0.5 }, 23.7, 0.2);
+  TXT('DEFECT: VITON EXTRUSION [98.4%]', 280, 808, 16, { f: 'KB', align: 'center', col: INK }, 24.2, 0.3);
+
+  // Step 2: LOCK (OSHA 1910.147 LOTO Safety Gate)
+  const lockBox = rrect(500, 565, 380, 265, 14);
+  FILL(lockBox, 24.8);
+  MRK([lockBox], { col: GRY, w: 12 }, 25.0, 0.2);
+  INK_(lockBox, { closed: true, w: 2.6, amp: 0.8 }, 24.8, 0.3);
+  TXT('STEP 2: LOCK', 690, 598, 24, { f: 'KB', align: 'center' }, 25.2, 0.25);
+  TXT('OSHA 1910.147 DE-ENERGIZATION GATE', 690, 626, 17, { f: 'PH', align: 'center', col: INK2 }, 25.5, 0.25);
+
+  // Heavy Industrial Padlock Sketch
+  const lockBody = rrect(645, 690, 95, 75, 12);
+  const shackle = bez([665, 690], [665, 645], [720, 645], [720, 690]);
+  FILL(lockBody, 26.0);
+  MRK([lockBody], { col: YELD, w: 14 }, 26.3, 0.2);
+  INK_(lockBody, { closed: true, w: 3.2, amp: 0.8 }, 26.0, 0.3);
+  INK_(shackle, { w: 4.5, amp: 0.5 }, 26.4, 0.25);
+  const keyhole = ell(692, 722, 6, 8);
+  INK_(keyhole, { closed: true, w: 2.5, amp: 0.2 }, 26.8, 0.1);
+  INK_(line(692, 728, 692, 742), { w: 3, amp: 0.2 }, 26.9, 0.1);
+
+  // Zero-Pressure Indicator Dial
+  const zeroDial = ell(595, 715, 26, 26);
+  FILL(zeroDial, 27.2);
+  MRK([zeroDial], { col: GRY, w: 8 }, 27.4, 0.1);
+  INK_(zeroDial, { closed: true, w: 2.2, amp: 0.4 }, 27.2, 0.2);
+  INK_(line(595, 715, 595, 694), { w: 3, col: INK }, 27.5, 0.1);
+  TXT('0 PSI', 595, 760, 16, { f: 'KB', align: 'center' }, 27.6, 0.2);
+
+  TXT('HARDWARE LOCKOUT VERIFIED BEFORE TOOL CONTACT', 690, 808, 15, { f: 'KB', align: 'center', col: INK }, 28.2, 0.35);
+
+  // -------------------------------------------------------------
+  // ZONE 4: BOTTOM-RIGHT (Step 3: FIX & Star Torque) [30.2s - 41.2s]
+  // -------------------------------------------------------------
+  box(940, 520, 910, 335, 30.2, 0.45);
+  ribbon(1395, 520, 500, 38, 'STEP 3: FIX (CALIBRATED STAR TORQUE)', 22, 30.5, { fill: YEL });
+
+  // 6-Bolt Flange Circle
+  const flange = ell(1110, 685, 75, 75);
+  dropShadow(flange, 6, 6, 31.0);
+  FILL(flange, 31.0);
+  MRK([flange], { col: GRY, w: 16 }, 31.3, 0.2);
+  INK_(flange, { closed: true, w: 3.2, amp: 1.0 }, 31.0, 0.35);
+
+  const bore = ell(1110, 685, 34, 34);
+  FILL(bore, 31.4);
+  INK_(bore, { closed: true, w: 2.5, amp: 0.5 }, 31.4, 0.2);
+
+  // 6 Bolts placed circularly
+  const boltOrder = [
+    { num: '1', ang: -Math.PI / 2 },
+    { num: '4', ang: Math.PI / 2 },
+    { num: '2', ang: -Math.PI / 2 + (2 * Math.PI / 3) },
+    { num: '5', ang: -Math.PI / 2 - (Math.PI / 3) },
+    { num: '3', ang: -Math.PI / 2 + (Math.PI / 3) },
+    { num: '6', ang: -Math.PI / 2 - (2 * Math.PI / 3) }
+  ];
+
+  boltOrder.forEach((b, idx) => {
+    const bx = 1110 + Math.cos(b.ang) * 54;
+    const by = 685 + Math.sin(b.ang) * 54;
+    const boltHole = ell(bx, by, 8.5, 8.5);
+    FILL(boltHole, 32.0 + idx * 0.12);
+    MRK([boltHole], { col: YEL, w: 8 }, 32.1 + idx * 0.12, 0.1);
+    INK_(boltHole, { closed: true, w: 2.2, amp: 0.3 }, 32.0 + idx * 0.12, 0.12);
+    TXT(b.num, bx, by + 4, 13, { f: 'KB', align: 'center' }, 32.2 + idx * 0.12, 0.1);
+  });
+
+  // Star Sequence Dashed Connecting Lines
+  const starPath = [];
+  boltOrder.forEach(b => starPath.push([1110 + Math.cos(b.ang) * 54, 685 + Math.sin(b.ang) * 54]));
+  starPath.push(starPath[0]);
+  INK_(starPath, { w: 2.2, dash: [8, 6], amp: 0.4, col: INK2 }, 33.0, 0.5);
+
+  // 3-Stage Torque Badges (15 Nm -> 25 Nm -> 35 Nm)
+  function torquePass(cx, cy, passTitle, val, state, t0, isFinal = false) {
+    const p = rrect(cx - 85, cy - 32, 170, 64, 12);
+    dropShadow(p, 5, 5, t0 + 0.1);
+    FILL(p, t0);
+    if (isFinal) MRK([p], { col: YEL, w: 14 }, t0 + 0.15, 0.2);
+    else MRK([p], { col: GRY, w: 10 }, t0 + 0.1, 0.15);
+    INK_(p, { closed: true, w: 2.6, amp: 0.7 }, t0, 0.2);
+    TXT(passTitle, cx, cy - 6, 16, { f: 'PH', align: 'center', col: INK2 }, t0 + 0.15, 0.15);
+    TXT(val, cx, cy + 20, 25, { f: 'KB', align: 'center', col: isFinal ? INK : INK2 }, t0 + 0.25, 0.2);
+  }
+
+  torquePass(1340, 635, 'PASS 1 (SEAT)', '15.0 Nm', 'Done', 34.0);
+  torquePass(1560, 635, 'PASS 2 (ALIGN)', '25.0 Nm', 'Done', 35.2);
+  torquePass(1450, 735, 'PASS 3 (FINAL LOCK)', '35.0 Nm', 'Verified', 36.4, true);
+
+  // Digital Torque LED Checkmark Stamp
+  const sealCircle = ell(1680, 735, 34, 34);
+  FILL(sealCircle, 39.0);
+  MRK([sealCircle], { col: YELD, w: 12 }, 39.2, 0.15);
+  INK_(sealCircle, { closed: true, w: 3.2, amp: 0.6 }, 39.0, 0.25);
+  INK_([[1666, 735], [1676, 747], [1697, 723]], { w: 4.5, amp: 0.3 }, 39.4, 0.2);
+  TXT('LED PASS', 1680, 785, 15, { f: 'KB', align: 'center' }, 39.7, 0.2);
+
+  // -------------------------------------------------------------
+  // ZONE 5: FOOTER HERO BADGES & REVEAL [41.2s - 52.0s]
+  // -------------------------------------------------------------
+  badge(380, 915, 420, 72, '84% FASTER MTTR', 'Average repair time: 42 min vs 4.8 hrs', 43.0);
+  badge(960, 915, 420, 72, '100% OFFLINE EDGE', 'Zero cloud telemetry leakage', 43.6);
+  badge(1540, 915, 420, 72, 'ZERO CASUALTIES', 'OSHA 1910.147 interlock guaranteed', 44.2);
+
+  TXT('SOURCE: github.com/narain-karti/MECH-G  |  EDGE ENGINE: GOOGLE GEMMA 4', 960, 1056, 20, { f: 'PH', align: 'center', col: INK2 }, 45.0, 0.6);
+}
+
+// ---------- Camera Keyframe Grammar (Authentic Sketchnote Moves) ----------
+const CAM_KEYS = [
+  // Act 1: Rupture close-up (t: 0 - 6.5s)
+  { t: 0.0,  x: 335, y: 310, z: 2.05, e: 'eo' },
+  { t: 4.5,  x: 335, y: 320, z: 1.90, e: 'eio' },
+  
+  // Act 2: Glide to Cloud AI Timeout (t: 6.5 - 13.0s)
+  { t: 7.0,  x: 300, y: 430, z: 1.80, e: 'eio' },
+  { t: 12.0, x: 335, y: 440, z: 1.65, e: 'eio' },
+
+  // Act 3: "Ride the pen" across Knowledge Graph (t: 13.5 - 20.5s)
+  { t: 13.5, x: 860,  y: 300, z: 1.60, e: 'eio' },  // starts on left nodes
+  { t: 16.5, x: 1220, y: 310, z: 1.55, e: 'eio' },  // centers on valve PRV-992-B
+  { t: 19.5, x: 1550, y: 310, z: 1.50, e: 'eio' },  // arrives at 35 Nm Spec
+
+  // Act 4: Glide down-left to SNAP & LOCK (t: 21.0 - 29.5s)
+  { t: 21.0, x: 280, y: 690, z: 1.50, e: 'eio' },  // on Step 1: SNAP
+  { t: 25.5, x: 670, y: 700, z: 1.55, e: 'eio' },  // on Step 2: LOCK
+
+  // Act 5: Glide right to Star Torque Station (t: 30.2 - 40.5s)
+  { t: 30.2, x: 1110, y: 690, z: 1.50, e: 'eio' },  // on Flange circle
+  { t: 35.0, x: 1450, y: 690, z: 1.50, e: 'eio' },  // on 35 Nm Torque passes
+  { t: 39.5, x: 1550, y: 720, z: 1.45, e: 'eio' },  // on LED checkmark stamp
+
+  // Act 6: Grand Logarithmic Pull-Back Climax to Master Poster (t: 41.2 - 52.0s)
+  { t: 41.2, x: 1350, y: 650, z: 1.30, e: 'eio' },
+  { t: 46.5, x: 960,  y: 540, z: 0.95, e: 'eo' },
+  { t: 52.0, x: 960,  y: 540, z: 0.95, e: 'linear' }
+];
+
+function cam(t) {
+  if (t <= CAM_KEYS[0].t) {
+    const k = CAM_KEYS[0]; return { x: k.x, y: k.y, z: k.z };
+  }
+  for (let i = 0; i < CAM_KEYS.length - 1; i++) {
+    const k0 = CAM_KEYS[i], k1 = CAM_KEYS[i + 1];
+    if (t >= k0.t && t <= k1.t) {
+      const u = (t - k0.t) / (k1.t - k0.t);
+      const easeFn = k0.e === 'eo' ? eo : k0.e === 'eio' ? eio : x => x;
+      const f = easeFn(u);
+      return {
+        x: lerp(k0.x, k1.x, f),
+        y: lerp(k0.y, k1.y, f),
+        z: Math.exp(lerp(Math.log(k0.z), Math.log(k1.z), f))
+      };
+    }
+  }
+  const last = CAM_KEYS[CAM_KEYS.length - 1];
+  return { x: last.x, y: last.y, z: last.z };
+}
+
+// ---------- Subtitles Slip at Bottom of Screen ----------
+const SUBTITLES = [
+  { start: 0.80, end: 6.10, text: "A hundred meters offshore, two hundred bar of oil is rupturing a turbine valve." },
+  { start: 7.20, end: 12.94, text: "Cloud AI gives a timeout. At two hundred bar, latency is fatal." },
+  { start: 13.80, end: 19.82, text: "MECH-G runs offline on Gemma 4, traversing the machine graph in five hundred milliseconds." },
+  { start: 21.00, end: 29.02, text: "Step one: SNAP defect. Step two: LOCK. The OSHA safety padlock clamps shut." },
+  { start: 30.20, end: 40.14, text: "Step three: FIX. Star torque pass: fifteen, twenty-five, thirty-five Newton-meters. Green LEDs verified." },
+  { start: 41.20, end: 51.52, text: "Eighty-four percent faster. Zero cloud risk. Zero casualties. MECH-G: Frontline intelligence for critical machines." }
+];
+
+function drawSubtitles(t) {
+  const activeSub = SUBTITLES.find(s => t >= s.start && t <= s.end);
+  if (!activeSub) return;
+
+  const fadeDur = 0.25;
+  let alpha = 1.0;
+  if (t - activeSub.start < fadeDur) alpha = (t - activeSub.start) / fadeDur;
+  else if (activeSub.end - t < fadeDur) alpha = (activeSub.end - t) / fadeDur;
+
+  ctx.save();
+  ctx.globalAlpha = clamp(alpha);
+
+  // Paper Slip positioned at y=980 with zero badge collision
+  const slipW = 1260, slipH = 50;
+  const slipX = (W - slipW) / 2, slipY = 980;
+
+  ctx.fillStyle = 'rgba(251, 250, 246, 0.95)';
+  ctx.shadowColor = 'rgba(50, 50, 60, 0.15)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 3;
+  ctx.fillRect(slipX, slipY, slipW, slipH);
+
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = 'rgba(80, 80, 92, 0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(slipX, slipY, slipW, slipH);
+
+  // Grey Washi Tape on top-left corner
+  ctx.fillStyle = 'rgba(120, 120, 130, 0.32)';
+  ctx.fillRect(slipX + 16, slipY - 7, 44, 13);
+
+  // Subtitle Text
+  ctx.fillStyle = '#1e1e22';
+  ctx.font = '23px PH, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(activeSub.text, W / 2, slipY + slipH / 2 + 1);
+
+  ctx.restore();
+}
+
+// ---------- Main Render Frame Function ----------
+function renderFrame(t) {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, W, H);
+
+  // Evaluate Camera
+  const C = cam(t);
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(C.z, C.z);
+  ctx.translate(-C.x, -C.y);
+
+  // 1. Draw Dot Grid in World Space
+  drawDotGrid();
+
+  // 2. Set Boil index
+  const frameIdx = Math.floor(t * FPS);
+  BOIL = Math.floor(frameIdx / 2) % 3;
+
+  // 3. Render Elements up to time t
+  for (const el of EL) {
+    if (t < el.t0) continue;
+    const prog = clamp((t - el.t0) / el.d);
+    SEED = el.seed;
+    el.draw(prog);
+  }
+
+  ctx.restore();
+
+  // 4. Draw Screen-Space Subtitles
+  drawSubtitles(t);
+}
+
+// Expose seek, render, DUR, READY for automation / frame capture
+window.DUR = TOTAL_DUR;
+window.render = renderFrame;
+window.renderFrame = renderFrame;
+window.seek = function(frame) {
+  const t = frame / FPS;
+  renderFrame(t);
+  return t;
+};
+
+// ---------- Boot & Pre-load ----------
+async function boot() {
+  console.log("[SKETCHNOTE] Booting engine...");
+  try {
+    GLY = await (await fetch('glyphs.json')).json();
+  } catch (e) {
+    console.warn("glyphs.json fetch fallback:", e);
+    GLY = { PH: { g: {}, hw: 0.15 }, KB: { g: {}, hw: 0.18 } };
+  }
+  
+  await Promise.all(['KB', 'PH'].map(f => document.fonts.load(`32px ${f}`, 'MECH-G 1234567890')));
+  buildPoster();
+  console.log(`[SKETCHNOTE] Built poster with ${EL.length} animated elements.`);
+  
+  renderFrame(0);
+  window.READY = true;
+}
+
+boot();
+</script>
+</body>
+</html>

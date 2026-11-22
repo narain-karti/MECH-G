@@ -42,4 +42,6 @@ video/**/__pycache__/
 
 # Whitelist Video Deliverables & Pipeline Scripts
 !video/mech_g_pitch.mp4
+!video/mech_g_sketchnote.mp4
+!video/lemo_sketchnote/mech_g_sketchnote.mp4
 !video/scenes/concat_list.txt

@@ -1,13 +1,16 @@
 {
-  "title": "The Turbine & The Mascot",
+  "title": "MECH-G: The 35 Newton-Meter Rule",
   "style": "sketchnote",
-  "dur": 48.0,
+  "dur": 52.0,
   "fps": 24,
+  "bpm": 120.0,
   "sections": {
-    "act1": [0.0, 13.0],
-    "act2": [13.0, 22.0],
-    "act3": [22.0, 36.0],
-    "act4": [36.0, 48.0]
+    "act1_rupture": [0.0, 7.2],
+    "act2_timeout_vs_edge": [7.2, 13.8],
+    "act3_graph_reasoning": [13.8, 21.0],
+    "act4_snap_and_lock": [21.0, 30.2],
+    "act5_calibrated_fix": [30.2, 41.2],
+    "act6_poster_climax": [41.2, 52.0]
   },
   "subtitles": "subtitles_en.srt"
 }
