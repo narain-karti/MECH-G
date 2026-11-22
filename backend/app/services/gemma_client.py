@@ -41,6 +41,8 @@ class GemmaClient:
         self.model_name = settings.gemma_model
 
     def _get_client(self):
+        if settings.offline_mode or os.environ.get("OFFLINE_MODE", "").lower() in ("true", "1", "yes"):
+            return None
         if not self.api_key:
             return None
         from google import genai

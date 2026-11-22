@@ -66,6 +66,7 @@ def main():
     concat_list_path = os.path.join(scenes_dir, "concat_list.txt")
     bgm_path = os.path.join(audio_dir, "bgm.wav")
     narration_path = os.path.join(audio_dir, "full_narration.wav")
+    sfx_path = os.path.join(audio_dir, "sfx_master.wav")
 
     log("=" * 70)
     log("MECH-G Master Video Composite & Sidechain Audio Ducking Engine")
@@ -76,6 +77,7 @@ def main():
     log(f"Concat List:    {concat_list_path}")
     log(f"BGM Asset:      {bgm_path}")
     log(f"Narration:      {narration_path}")
+    log(f"SFX Master:     {sfx_path}")
     log(f"Final Output:   {output_path}")
 
     # 1. Validate all source prerequisites
@@ -84,6 +86,8 @@ def main():
         missing.append(bgm_path)
     if not os.path.isfile(narration_path):
         missing.append(narration_path)
+    if not os.path.isfile(sfx_path):
+        missing.append(sfx_path)
     if not os.path.isfile(concat_list_path):
         missing.append(concat_list_path)
 
@@ -100,14 +104,16 @@ def main():
     log("All 9 scene files, concat_list.txt, and audio assets verified present.")
 
     # 2. Construct FFmpeg command
-    # Input 0: bgm.wav
-    # Input 1: full_narration.wav
-    # Input 2: concat_list.txt via concat demuxer
-    # Filter: sidechaincompress ducking bgm under narration
+    # Input 0: bgm.wav (120 BPM dark industrial score)
+    # Input 1: full_narration.wav (ElevenLabs Adam voice)
+    # Input 2: sfx_master.wav (Librosa beat-synced SFX)
+    # Input 3: concat_list.txt via concat demuxer (visual scenes)
+    # Filter: sidechaincompress ducking bgm under narration (-18 dB), then mixing with SFX and clean narration
     filter_complex = (
         "[1:a]asplit=2[sc][vox_clean];"
         "[0:a][sc]sidechaincompress=threshold=0.03:ratio=10:attack=20:release=300[ducked_bgm];"
-        "[ducked_bgm][vox_clean]amix=inputs=2:duration=first[aout]"
+        "[ducked_bgm][2:a]amix=inputs=2:weights=1.0 1.2:duration=first[bed_sfx];"
+        "[bed_sfx][vox_clean]amix=inputs=2:weights=0.8 1.4:duration=first[aout]"
     )
 
     ffmpeg_cmd = [
@@ -115,11 +121,12 @@ def main():
         "-y",
         "-i", bgm_path,
         "-i", narration_path,
+        "-i", sfx_path,
         "-f", "concat",
         "-safe", "0",
         "-i", concat_list_path,
         "-filter_complex", filter_complex,
-        "-map", "2:v",
+        "-map", "3:v",
         "-map", "[aout]",
         "-c:v", "libx264",
         "-preset", "medium",

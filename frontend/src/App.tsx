@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-route
 import { ProcessingProvider } from "./context/ProcessingContext";
 import { TourProvider } from "./context/TourContext";
 import { TourOverlay } from "./components/tour/TourOverlay";
+import { Toaster } from "./components/ui/toast-stack";
+import { GlobalCommandPalette } from "./components/navigation/GlobalCommandPalette";
 import { WorkspacePage } from "./pages/WorkspacePage";
 import { DiagnosticPage } from "./pages/DiagnosticPage";
 import { GraphPage } from "./pages/GraphPage";
@@ -27,6 +29,8 @@ export default function App() {
       <ProcessingProvider>
         <TourProvider>
           <TourOverlay />
+          <GlobalCommandPalette />
+          <Toaster position="bottom-right" />
           <ScrollToTopOnNavigate />
           <Routes>
             {/* Primary AI Knowledge Workspace (NotebookLM 3-Panel Experience) */}

@@ -25,9 +25,16 @@ class Settings(BaseSettings):
     # Security & Safety
     cors_origins: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
     strict_safety_gate: bool = True
+    offline_mode: bool = False
 
     model_config = SettingsConfigDict(
-        env_file=(".env", "../.env", "backend/.env"),
+        env_file=(
+            ".env",
+            "../.env",
+            "backend/.env",
+            str(Path(__file__).resolve().parent.parent / ".env"),
+            str(Path(__file__).resolve().parent.parent.parent / ".env"),
+        ),
         env_file_encoding="utf-8",
         extra="ignore",
     )

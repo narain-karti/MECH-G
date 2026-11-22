@@ -2,6 +2,7 @@ import re
 import json
 import uuid
 import logging
+from pathlib import Path
 from typing import AsyncGenerator, List, Optional, Dict, Any
 
 from app.services.graph_engine import OKFGraphEngine

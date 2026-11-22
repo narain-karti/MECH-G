@@ -1,0 +1,107 @@
+{
+  "fitted_bpm": 120.01,
+  "beat_period_s": 0.49998,
+  "total_beats": 135,
+  "total_transients": 462,
+  "scenes": [
+    {
+      "scene": 1,
+      "name": "Nacelle Reality (Act 1)",
+      "visual_frame": 0,
+      "visual_time_s": 0.0,
+      "audio_transient_s": 0.0348,
+      "delta_ms": 34.83,
+      "delta_frames": 1.04,
+      "sfx_cue": "Sub Braam & Wind",
+      "status": "LOCKED"
+    },
+    {
+      "scene": 2,
+      "name": "Generic RAG Failure (Act 1->2)",
+      "visual_frame": 300,
+      "visual_time_s": 10.0,
+      "audio_transient_s": 10.0078,
+      "delta_ms": 7.8,
+      "delta_frames": 0.23,
+      "sfx_cue": "Cloud Disconnect Glitch",
+      "status": "LOCKED"
+    },
+    {
+      "scene": 3,
+      "name": "Failure Mechanics (Act 2)",
+      "visual_frame": 540,
+      "visual_time_s": 18.0,
+      "audio_transient_s": 18.0071,
+      "delta_ms": 7.07,
+      "delta_frames": 0.21,
+      "sfx_cue": "RAG 504 Timeout Alarm",
+      "status": "LOCKED"
+    },
+    {
+      "scene": 4,
+      "name": "Catastrophic Rupture (Act 2)",
+      "visual_frame": 780,
+      "visual_time_s": 26.0,
+      "audio_transient_s": 26.0063,
+      "delta_ms": 6.35,
+      "delta_frames": 0.19,
+      "sfx_cue": "55 Nm CAD Rupture Burst",
+      "status": "LOCKED"
+    },
+    {
+      "scene": 5,
+      "name": "Walkthrough Step 1: SNAP (Act 3)",
+      "visual_frame": 1020,
+      "visual_time_s": 34.0,
+      "audio_transient_s": 34.0056,
+      "delta_ms": 5.62,
+      "delta_frames": 0.17,
+      "sfx_cue": "Gemma Vision Shutter",
+      "status": "LOCKED"
+    },
+    {
+      "scene": 6,
+      "name": "Walkthrough Step 2: LOCK (Act 3)",
+      "visual_frame": 1260,
+      "visual_time_s": 42.0,
+      "audio_transient_s": 42.0165,
+      "delta_ms": 16.51,
+      "delta_frames": 0.5,
+      "sfx_cue": "OSHA Solenoid Gate Lock",
+      "status": "LOCKED"
+    },
+    {
+      "scene": 7,
+      "name": "Walkthrough Step 3: FIX & VERIFY",
+      "visual_frame": 1530,
+      "visual_time_s": 51.0,
+      "audio_transient_s": 51.0142,
+      "delta_ms": 14.24,
+      "delta_frames": 0.43,
+      "sfx_cue": "35 Nm Torque Wrench Click",
+      "status": "LOCKED"
+    },
+    {
+      "scene": 8,
+      "name": "Operational Metrics (Act 4)",
+      "visual_frame": 1800,
+      "visual_time_s": 60.0,
+      "audio_transient_s": 60.012,
+      "delta_ms": 11.97,
+      "delta_frames": 0.36,
+      "sfx_cue": "Kinetic Riser & Slam",
+      "status": "LOCKED"
+    },
+    {
+      "scene": 9,
+      "name": "MECH-G Lockup Outro (Act 4)",
+      "visual_frame": 2100,
+      "visual_time_s": 70.0,
+      "audio_transient_s": 70.0082,
+      "delta_ms": 8.16,
+      "delta_frames": 0.24,
+      "sfx_cue": "Cinematic Impact & Shimmer",
+      "status": "LOCKED"
+    }
+  ]
+}
