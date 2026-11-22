@@ -1,0 +1,19 @@
+1
+00:00:00,200 --> 00:00:09,600
+A hundred meters high, a hydraulic valve blows. Zero signal, four thousand manual pages, and thirty thousand dollars an hour downtime.
+
+2
+00:00:10,000 --> 00:00:19,500
+Generic cloud AI drops safety interlocks and hallucinates fifty-five Newton meters instead of thirty-five—risking catastrophic blowout.
+
+3
+00:00:20,000 --> 00:00:23,200
+Cloud AI is dead out here. Meet MECH-G.
+
+4
+00:00:23,600 --> 00:00:37,000
+Snap: Gemma vision identifies the valve offline. Lock: OSHA safety gate verifies zero energy. Fix: Calibrated thirty-five Newton meters, backed by exact citations.
+
+5
+00:00:37,400 --> 00:00:47,000
+Eighty-four percent faster repair. Sub-five-hundred millisecond local graph latency. MECH-G: Mission-critical edge intelligence.

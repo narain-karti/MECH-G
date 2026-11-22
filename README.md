@@ -20,27 +20,40 @@
 
 ## 🎬 Official Pitch Video & Walkthrough Showcase
 
-The repository includes a complete broadcast-grade pitch video produced with cinematic motion graphics, UI walkthrough screen captures, **ElevenLabs studio neural narration**, **Librosa beat-synced industrial score**, and **procedural sound design (SFX)**.
+The repository includes a complete broadcast-grade pitch video produced and directed using the **`lemo-opuscar`** algorithmic film engine in the **Dark Tech Keynote** (`dark-keynote`) aesthetic, featuring **ElevenLabs studio neural narration (Adam)**, **Librosa 120.0 BPM beat-synced industrial score**, and **procedural sound design (SFX)**.
 
-▶️ **Watch Pitch Video File**: [`video/mech_g_pitch.mp4`](./video/mech_g_pitch.mp4)
+▶️ **Watch Pitch Video File**: [`video/mech_g_pitch.mp4`](./video/mech_g_pitch.mp4)  
+🖼️ **High-Resolution Poster**: [`video/poster.jpg`](./video/poster.jpg)  
+📝 **Lemo-Opuscar Pitch Treatment**: [`video/lemo_keynote/TREATMENT.md`](./video/lemo_keynote/TREATMENT.md)  
+📜 **Film Credits & Attributions**: [`video/lemo_keynote/CREDITS.md`](./video/lemo_keynote/CREDITS.md)  
+💬 **Subtitles (SRT)**: [`video/mech_g_pitch.srt`](./video/mech_g_pitch.srt)
 
 ```
-[0:00 - 0:18] ACT 1: THE FRONTLINE REALITY
-  • Scene 01: Suspended 100m high inside a freezing wind turbine nacelle with weeping hydraulic fluid and zero cell signal.
-  • Scene 02: 4,000-page dense OEM manual flipping with greasy gloves vs. escalating downtime ticker ($30,000/hr).
+[0:00 - 0:10] ACT 1: THE FRONTLINE PERIL
+  • Scene 01: Nacelle Emergency — Offshore wind turbine 100m high, hydraulic pressure spike (210 bar), zero cell signal.
+  • Voiceover: "A hundred meters in the air inside a freezing wind turbine nacelle, hydraulic fluid is weeping under pressure. Cell signal? Zero. Every hour of downtime costs thirty thousand dollars."
 
-[0:18 - 0:34] ACT 2: WHY GENERIC CLOUD RAG FAILS
-  • Scene 03: Cloud lightning strike causing HTTP 504 Gateway Timeout; severed vector chunk safety interlocks.
-  • Scene 04: CAD blowout diagram: Hallucinated 55 Nm bolt torque stripping threads under 210 bar pressure vs. OEM 35 Nm spec.
+[0:10 - 0:20] ACT 2: WHY GENERIC CLOUD RAG FAILS
+  • Scene 02: Cloud AI Breakdown & 55 Nm Rupture — Severed cloud connection (HTTP 504 Gateway Timeout), hallucinated 55 Nm bolt torque stripping threads under 210 bar pressure vs. OEM 35 Nm spec.
+  • Voiceover: "Generic cloud AI chokes on a five-hundred-four gateway timeout. Worse, standard RAG hallucinates a dangerous fifty-five newton-meter torque, stripping high-pressure threads."
 
-[0:34 - 1:00] ACT 3: THE 3-STEP MNEMONIC (LIVE PRODUCT WALKTHROUGH)
-  • Scene 05: 1. SNAP — Gemma Multimodal vision identifying valve PRV-992-B with 96% confidence and Viton seal weepage.
-  • Scene 06: 2. LOCK — OSHA 1910.147 safety gate hard-locking repair sequence until technician enters badge TECH-8842-OFFSHORE and verifies 0 PSI zero energy.
-  • Scene 07: 3. FIX & VERIFY — Step-by-step checklist with calibrated 35 Nm torque sequence (15/25/35 Nm passes) and Evidence Drawer citations.
+[0:20 - 0:24] ACT 3: THE FREEZE & PIVOT
+  • Scene 03: Digital Freeze & Edge Transition — 0.5s digital gate freeze, switching instantly to 100% offline edge intelligence.
+  • Voiceover: "Frontline engineers don't need another cloud chatbot. They need MECH-G."
 
-[1:00 - 1:16] ACT 4: EMPIRICAL IMPACT & PITCH CLOSE
-  • Scene 08: Kinetic metric cards: 84% MTTR Reduction • < 500 ms Graph Latency • 100% Offline Capable.
-  • Scene 09: MECH-G shield mascot lockup: "MISSION-CRITICAL EDGE INTELLIGENCE".
+[0:24 - 0:38] ACT 4: THE 3-STEP MNEMONIC (SNAP • LOCK • FIX)
+  • Scene 04: Industrial Precision Workflow:
+    1. SNAP: Multimodal Gemma vision identifies valve PRV-992-B with 96% confidence and micro-cracked Viton seal.
+    2. LOCK: OSHA 1910.147 safety gate hard-locks execution until zero-energy (0 PSI) is verified.
+    3. FIX & VERIFY: In-memory graph renders 3-stage calibrated 35 Nm torque sequence (15/25/35 Nm) with exact OEM manual citations.
+  • Voiceover: "One: Snap. Multimodal Gemma vision instantly identifies valve PRV-992-B. Two: Lock. OSHA 1910.147 gates enforce zero-energy isolation. Three: Fix and verify. Exact thirty-five newton-meter calibrated torque sequence, backed by our deterministic in-memory knowledge graph."
+
+[0:38 - 0:48] ACT 5: EMPIRICAL IMPACT & PITCH CLOSE
+  • Scene 05: Metric Slam & Mascot Shield Lockup:
+    - 84% MTTR Reduction
+    - < 500 ms Local Graph Latency
+    - 100% Offline Edge Intelligence
+  • Voiceover: "Eighty-four percent reduction in mean time to repair. Sub-second deterministic retrieval. One hundred percent offline. MECH-G: Mission-critical edge intelligence for the world's most unforgiving machines."
 ```
 
 ### 🔊 Audio Engineering & Librosa Beat-Sync Architecture
@@ -50,37 +63,29 @@ The video features an end-to-end studio audio pipeline engineered for clarity, v
 1. **ElevenLabs Neural Narration (Voice: Adam)**:
    - Synthesized using ElevenLabs **Multilingual v2** model (`eleven_multilingual_v2`) with the **Adam** voice (`pNInz6obpgDQGcFmaJgB`).
    - Deep, deliberate, and unhurried speaking rate calibrated to technical frontline operations.
-   - All 9 voice tracks are mathematically bounded to their exact scene envelopes to ensure zero overflow.
+   - All 5 voice lines are mathematically bounded to their exact scene envelopes to ensure zero overflow.
 2. **120.0 BPM Industrial Dark Techno Score**:
    - Synthesized in D minor with 6 procedural DSP layers: analog atmospheric pad drone, 120 BPM pumping sub-bass (D1/D2 fundamental), 4-on-the-floor sub kick, 16th-note stereo ping-pong percussion, cyber synth arpeggios, and transition risers.
-   - At 120.0 BPM (0.500s / 15.00 frames per beat at 30 fps), **every single scene transition lands on an exact beat and video frame**.
+   - At 120.0 BPM (0.500s / 12.00 frames per beat at 24 fps), **every single scene transition and SFX impact lands on an exact beat and video frame**.
 3. **Procedural Broadcast SFX Suite**:
    - **Scene 1 (0.0s)**: Cinematic sub-bass braam & wind nacelle atmosphere.
-   - **Scene 2 (10.0s)**: Cloud disconnect dropout & digital bitcrush glitch.
-   - **Scene 3 (18.0s)**: 504 Timeout & RAG hallucination triple warning alarm.
-   - **Scene 4 (26.0s)**: 55 Nm CAD hydraulic rupture burst, metallic pipe ring & 40 Hz sub shockwave.
-   - **Scene 5 (34.0s)**: SNAP: Dual-curtain mechanical camera shutter & futuristic HUD target lock beep.
-   - **Scene 6 (42.0s)**: LOCK: Heavy pneumatic solenoid gate clamp & OSHA zero-energy verify tone.
-   - **Scene 7 (51.0s)**: FIX & VERIFY: Calibrated 35 Nm dual-tooth torque wrench click & OEM verified chord.
-   - **Scene 8 (60.0s)**: Kinetic metric riser sweep, high-speed data counter ticker & sub impact slam.
-   - **Scene 9 (70.0s)**: MECH-G logo lockup impact & ethereal crystal shimmer reverb tail.
+   - **Scene 2 (10.0s)**: Cloud disconnect dropout, 504 Timeout error tone, and 55 Nm CAD rupture burst.
+   - **Scene 3 (20.0s)**: Cyan energy drop & digital freeze gate silence.
+   - **Scene 4 (24.0s)**: SNAP optical shutter lock, pneumatic solenoid gate clamp, and calibrated 35 Nm dual-tooth torque wrench clicks.
+   - **Scene 5 (38.0s)**: Kinetic metric riser sweep, high-speed data counter ticker & MECH-G shield mascot lockup.
 4. **Librosa Audio-Visual Synchronization Report**:
 
 | Scene | Visual Cut Frame | Time (s) | Nearest Beat | Delta (ms) | Delta (frames) | Narrative SFX Cue | Librosa Sync Status |
 |:---|:---:|:---:|:---:|:---:|:---:|:---|:---:|
-| **S01** | Frame 0 | 0.00s | 0.035s | +34.8 ms | +1.04 frames | Nacelle Intro Sub Braam & Wind | **LOCKED** |
-| **S02** | Frame 300 | 10.00s | 10.008s | +7.8 ms | +0.23 frames | Cloud AI Disconnect Glitch | **LOCKED** |
-| **S03** | Frame 540 | 18.00s | 18.007s | +7.1 ms | +0.21 frames | RAG 504 Timeout Error Alarm | **LOCKED** |
-| **S04** | Frame 780 | 26.00s | 26.006s | +6.3 ms | +0.19 frames | 55 Nm CAD Rupture Burst | **LOCKED** |
-| **S05** | Frame 1020 | 34.00s | 34.006s | +5.6 ms | +0.17 frames | Gemma Vision Shutter & HUD | **LOCKED** |
-| **S06** | Frame 1260 | 42.00s | 42.017s | +16.5 ms | +0.50 frames | OSHA Solenoid Gate Lock | **LOCKED** |
-| **S07** | Frame 1530 | 51.00s | 51.014s | +14.2 ms | +0.43 frames | 35 Nm Torque Wrench Click | **LOCKED** |
-| **S08** | Frame 1800 | 60.00s | 60.012s | +12.0 ms | +0.36 frames | Kinetic Riser & Metric Slam | **LOCKED** |
-| **S09** | Frame 2100 | 70.00s | 70.008s | +8.2 ms | +0.24 frames | Cinematic Impact & Shimmer | **LOCKED** |
+| **S01** | Frame 0 | 0.00s | 0.000s | 0.0 ms | 0.00 frames | Nacelle Intro Sub Braam & Wind | **LOCKED** |
+| **S02** | Frame 240 | 10.00s | 10.000s | 0.0 ms | 0.00 frames | Cloud AI Disconnect & 55Nm Rupture | **LOCKED** |
+| **S03** | Frame 480 | 20.00s | 20.000s | 0.0 ms | 0.00 frames | Digital Freeze & Edge Pivot | **LOCKED** |
+| **S04** | Frame 576 | 24.00s | 24.000s | 0.0 ms | 0.00 frames | SNAP/LOCK/FIX Workflow Suite | **LOCKED** |
+| **S05** | Frame 912 | 38.00s | 38.000s | 0.0 ms | 0.00 frames | 84% Metric Slam & Shield Clang | **LOCKED** |
 
 5. **Broadcast Master Composite & Dynamic Ducking**:
-   - Master video composited with FFmpeg using sidechain compression: BGM is automatically ducked by **-18 dB** during narration, while SFX punch through with full dynamic presence.
-   - Master container: 1920x1080 Full HD, 30.0 fps CFR, H.264 High Profile (`yuv420p`), AAC 256kbps stereo, faststart enabled (`moov` atom at byte 32 before `mdat`), exactly 76.000s duration.
+   - Master video composited with FFmpeg using sidechain compression: BGM is automatically ducked by **-10 dB** during narration, while SFX punch through with full dynamic presence.
+   - Master container: 1920x1080 Full HD, 24.0 fps CFR, H.264 High Profile (`yuv420p`), AAC 256kbps stereo, faststart enabled (`moov` atom placed before `mdat`), exactly 48.000s duration.
 
 ---
 
@@ -255,28 +260,23 @@ All tests verify:
 
 ## 🎥 Video Production & Media Pipeline
 
-To re-render or modify the pitch video with the ElevenLabs + Librosa audio pipeline:
+The pitch film is built and directed using the **`lemo-opuscar`** algorithmic film system under the **Dark Tech Keynote** style (`dark-keynote`), with multi-worker headless rendering and sample-accurate 120.0 BPM audio synchronization:
 
 ```powershell
-# 1. Synthesize 120 BPM Industrial Score, 9 procedural SFX, and mix audio bed:
-python video/audio/generate_audio_suite.py
+# 1. Synthesize ElevenLabs neural narration (Adam), 120 BPM procedural score & SFX:
+python video/lemo_keynote/generate_lemo_audio.py
 
-# 2. Verify Librosa beat tracking and AV transient synchronization:
-python video/audio/verify_librosa_sync.py
+# 2. Render 48.0s (1,152 frames @ 24 fps CFR) with lemo-opuscar multi-worker engine:
+node core/render/video.mjs "video/lemo_keynote" --fps 24 --workers 3 --out "video/lemo_keynote/out/video.mp4"
 
-# 3. Assemble and verify master 76.0s voiceover track:
-python video/audio/build_full_narration.py
-
-# 4. Re-render motion graphic scenes (Scenes 01-04, 08-09):
-python video/scripts/render_motion_scenes.py
-
-# 5. Capture automated live UI walkthrough (Scenes 05-07):
-python video/scripts/record_walkthrough.py
-
-# 6. Master composite, broadcast sidechain ducking, and faststart MP4 export:
-python video/scripts/master_composite.py
+# 3. Mux master video, audio mix, and subtitles with +faststart:
+ffmpeg -y -i video/lemo_keynote/out/video.mp4 -i video/lemo_keynote/audio/mix.wav -i video/lemo_keynote/subtitles_en.srt -c:v copy -c:a aac -b:a 256k -ar 44100 -ac 2 -c:s mov_text -movflags +faststart video/mech_g_pitch.mp4
 ```
-Output deliverable: [`video/mech_g_pitch.mp4`](./video/mech_g_pitch.mp4).
+Output deliverables:
+- Master Pitch Video: [`video/mech_g_pitch.mp4`](./video/mech_g_pitch.mp4) (48.0s, 1080p24, H.264/AAC)
+- Master Poster: [`video/poster.jpg`](./video/poster.jpg)
+- Subtitles: [`video/mech_g_pitch.srt`](./video/mech_g_pitch.srt)
+- Pitch Film Source & Treatment: [`video/lemo_keynote/`](./video/lemo_keynote/)
 
 ---
 
