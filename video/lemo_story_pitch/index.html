@@ -1,0 +1,1092 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MECH-G: The Frontline Fix (Animated Story Pitch)</title>
+<style>
+@font-face { font-family: KB; src: url(fonts/Kalam-Bold.ttf); font-display: block; }
+@font-face { font-family: PH; src: url(fonts/PatrickHand-Regular.ttf); font-display: block; }
+html, body { margin: 0; padding: 0; background: #F5F4EE; overflow: hidden; width: 100%; height: 100%; }
+canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+
+<script>
+const W = 1920, H = 1080, FPS = 24, TOTAL_DUR = 55.0;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+
+// ---------- Palette ----------
+const C = {
+  bg: '#F5F4EE',
+  deck: '#D8D4C8',
+  deckLines: '#BCB8AB',
+  ink: '#1E2229',
+  inkLight: '#4A5260',
+  navy: '#1A2536',
+  orange: '#FF5E1E',
+  orangeDark: '#D4440B',
+  yellow: '#FFCA28',
+  yellowDark: '#E6A800',
+  cyan: '#00E5FF',
+  cyanDark: '#00B0FF',
+  green: '#00E676',
+  greenDark: '#00B248',
+  red: '#FF1744',
+  white: '#FFFFFF',
+  silver: '#E0E4E8',
+  skin: '#FFCC80',
+  skinShade: '#E0A960'
+};
+
+const TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const ss = t => { t = clamp(t); return t * t * (3 - 2 * t); };
+const eo = t => 1 - Math.pow(1 - clamp(t), 3);
+const eio = t => { t = clamp(t); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+
+// Helper primitives
+function rrect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+}
+
+// ---------- Subtitles Data ----------
+const SUBTITLES = [
+  { start: 0.80, end: 7.28, text: "Meet Alex. A hundred meters up a wind turbine, a two-hundred-bar valve blows a seal." },
+  { start: 7.80, end: 13.80, text: "Cloud AI gives a timeout. No reception, and paper manuals take hours." },
+  { start: 14.30, end: 19.72, text: "Alex deploys MECH-G: fully offline intelligence powered by Google Gemma 4." },
+  { start: 20.20, end: 28.36, text: "Step one: SNAP. Computer vision locks onto valve PRV-992-B in four hundred milliseconds." },
+  { start: 28.90, end: 36.15, text: "Step two: LOCK. The OSHA safety padlock clamps shut. Pressure drops to zero." },
+  { start: 36.70, end: 45.68, text: "Step three: FIX. Star torque pass: fifteen, twenty-five, thirty-five Newton-meters. Verified." },
+  { start: 46.00, end: 53.70, text: "Eighty-four percent faster. Zero cloud risk. Zero casualties. MECH-G." }
+];
+
+// ---------- Drawing Modules ----------
+
+// 1. Background Setting: Nacelle Interior with Porthole Window
+function drawEnvironment(t) {
+  // Base room wall
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Deck / Floor
+  const floorY = 780;
+  ctx.fillStyle = C.deck;
+  ctx.fillRect(0, floorY, W, H - floorY);
+
+  ctx.strokeStyle = C.deckLines;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, floorY);
+  ctx.lineTo(W, floorY);
+  ctx.stroke();
+
+  // Floor tread marks
+  ctx.lineWidth = 1.5;
+  for (let x = 60; x < W; x += 90) {
+    ctx.beginPath();
+    ctx.moveTo(x, floorY + 15);
+    ctx.lineTo(x + 40, floorY + 45);
+    ctx.moveTo(x + 40, floorY + 45);
+    ctx.lineTo(x, floorY + 75);
+    ctx.stroke();
+  }
+
+  // Porthole Window to the Outside (Sky & Ocean)
+  // Hide porthole when tablet or pitch outro occupies the right side
+  if (t < 29.0) {
+    const wx = 1520, wy = 340, wr = 220;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(wx, wy, wr, 0, TAU);
+    ctx.clip();
+
+    // Sky gradient
+    const skyGrad = ctx.createLinearGradient(wx, wy - wr, wx, wy + wr);
+    skyGrad.addColorStop(0, '#74B9FF');
+    skyGrad.addColorStop(0.6, '#A1D9FF');
+    skyGrad.addColorStop(1, '#0984E3');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(wx - wr, wy - wr, wr * 2, wr * 2);
+
+    // Distant Ocean Horizon
+    ctx.fillStyle = '#0984E3';
+    ctx.fillRect(wx - wr, wy + 60, wr * 2, wr);
+
+    // Rotating Wind Turbine Blades outside (turns slowly, spins smooth at end)
+    const bladeRot = (t < 45.0 ? t * 0.4 : 45.0 * 0.4 + (t - 45.0) * 2.2);
+    ctx.save();
+    ctx.translate(wx + 80, wy + 20);
+    ctx.rotate(bladeRot);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.rotate((i * TAU) / 3);
+      ctx.beginPath();
+      ctx.ellipse(0, -90, 8, 85, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = '#DFE6E9';
+    ctx.beginPath();
+    ctx.arc(0, 0, 16, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+
+    // Porthole steel bezel & rivets
+    ctx.strokeStyle = '#636E72';
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.arc(wx, wy, wr, 0, TAU);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#2D3436';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(wx, wy, wr + 7, 0, TAU);
+    ctx.arc(wx, wy, wr - 7, 0, TAU);
+    ctx.stroke();
+  }
+}
+
+// 2. Alex the Engineer Character Rig
+function drawAlex(x, y, pose, t) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Breathing / idle bounce
+  const bounce = Math.sin(t * 3.5) * 2;
+
+  // Legs & Boots
+  ctx.fillStyle = C.navy;
+  // Left leg
+  rrect(-40, 200, 32, 130, 8);
+  ctx.fill();
+  // Right leg
+  rrect(8, 200, 32, 130, 8);
+  ctx.fill();
+
+  // Steel-toe boots
+  ctx.fillStyle = '#2D3436';
+  rrect(-48, 310, 44, 28, 6);
+  ctx.fill();
+  rrect(4, 310, 44, 28, 6);
+  ctx.fill();
+
+  // Torso / High-vis Vest
+  ctx.save();
+  ctx.translate(0, bounce);
+
+  // Base navy work shirt
+  ctx.fillStyle = C.navy;
+  rrect(-55, 60, 110, 150, 14);
+  ctx.fill();
+
+  // High-vis Orange Safety Vest
+  ctx.fillStyle = C.orange;
+  rrect(-52, 60, 104, 135, 12);
+  ctx.fill();
+
+  // Silver reflective stripes
+  ctx.fillStyle = C.silver;
+  ctx.fillRect(-52, 105, 104, 16);
+  ctx.fillRect(-52, 145, 104, 16);
+  // Vertical harness straps
+  ctx.fillRect(-32, 60, 14, 135);
+  ctx.fillRect(18, 60, 14, 135);
+
+  // Head & Neck
+  // Neck
+  ctx.fillStyle = C.skin;
+  ctx.fillRect(-14, 35, 28, 30);
+
+  // Head
+  ctx.fillStyle = C.skin;
+  ctx.beginPath();
+  ctx.arc(0, 10, 42, 0, TAU);
+  ctx.fill();
+
+  // Ears
+  ctx.beginPath();
+  ctx.arc(-42, 10, 10, 0, TAU);
+  ctx.arc(42, 10, 10, 0, TAU);
+  ctx.fill();
+
+  // Facial Expressions based on pose
+  ctx.fillStyle = C.ink;
+  if (pose === 'panic') {
+    // Wide panicked eyes
+    ctx.fillStyle = C.white;
+    ctx.beginPath();
+    ctx.arc(-16, 8, 12, 0, TAU);
+    ctx.arc(16, 8, 12, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = C.ink;
+    ctx.beginPath();
+    ctx.arc(-16 + Math.sin(t * 8) * 3, 8, 5, 0, TAU);
+    ctx.arc(16 + Math.sin(t * 8) * 3, 8, 5, 0, TAU);
+    ctx.fill();
+
+    // Wavy alarmed mouth
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = C.ink;
+    ctx.beginPath();
+    ctx.moveTo(-18, 32);
+    ctx.quadraticCurveTo(-8, 24, 0, 32);
+    ctx.quadraticCurveTo(8, 40, 18, 32);
+    ctx.stroke();
+
+    // Flying sweat droplets
+    ctx.fillStyle = '#74B9FF';
+    for (let i = 0; i < 3; i++) {
+      const sw = (t * 4 + i * 2) % 3;
+      ctx.beginPath();
+      ctx.arc(36 + i * 14 + sw * 8, -10 - i * 8, 5, 0, TAU);
+      ctx.fill();
+    }
+  } else if (pose === 'confused') {
+    // One raised eyebrow, puzzled eyes
+    ctx.beginPath();
+    ctx.arc(-16, 10, 4, 0, TAU);
+    ctx.arc(16, 10, 4, 0, TAU);
+    ctx.fill();
+
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = C.ink;
+    ctx.beginPath();
+    ctx.moveTo(-24, 0); ctx.lineTo(-8, 3);
+    ctx.moveTo(8, 0); ctx.lineTo(26, -6); // raised right brow
+    ctx.stroke();
+
+    // Crooked mouth
+    ctx.beginPath();
+    ctx.moveTo(-10, 32); ctx.lineTo(12, 28);
+    ctx.stroke();
+  } else if (pose === 'focused') {
+    // Serious, confident tech focus
+    ctx.beginPath();
+    ctx.arc(-15, 10, 4.5, 0, TAU);
+    ctx.arc(15, 10, 4.5, 0, TAU);
+    ctx.fill();
+
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = C.ink;
+    ctx.beginPath();
+    ctx.moveTo(-24, 2); ctx.lineTo(-8, 5);
+    ctx.moveTo(8, 5); ctx.lineTo(24, 2);
+    ctx.stroke();
+
+    // Determined line mouth
+    ctx.beginPath();
+    ctx.moveTo(-10, 32); ctx.lineTo(10, 32);
+    ctx.stroke();
+  } else {
+    // Triumphant Happy Smile / Wink
+    ctx.beginPath();
+    ctx.arc(-16, 8, 5, 0, TAU); // left eye
+    ctx.fill();
+    // Right eye winking arch
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = C.ink;
+    ctx.beginPath();
+    ctx.arc(16, 8, 8, Math.PI, 0);
+    ctx.stroke();
+
+    // Big happy grin
+    ctx.beginPath();
+    ctx.arc(0, 24, 16, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+  }
+
+  // Industrial Yellow Safety Hardhat
+  ctx.fillStyle = C.yellow;
+  ctx.beginPath();
+  ctx.ellipse(0, -18, 52, 28, 0, Math.PI, 0);
+  ctx.fill();
+  // Helmet brim
+  rrect(-58, -20, 116, 12, 6);
+  ctx.fill();
+
+  // Helmet Headlamp / MECH-G Shield
+  ctx.fillStyle = C.cyan;
+  rrect(-12, -32, 24, 14, 4);
+  ctx.fill();
+
+  // Arms & Props based on pose
+  ctx.strokeStyle = C.navy;
+  ctx.lineWidth = 22;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (pose === 'panic') {
+    // Hands in the air panicking
+    ctx.beginPath();
+    ctx.moveTo(-45, 75);
+    ctx.lineTo(-75, 20 + Math.sin(t * 8) * 8);
+    ctx.lineTo(-90, -25 + Math.sin(t * 8) * 12);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(45, 75);
+    ctx.lineTo(75, 20 - Math.sin(t * 8) * 8);
+    ctx.lineTo(90, -25 - Math.sin(t * 8) * 12);
+    ctx.stroke();
+  } else if (pose === 'confused') {
+    // Left hand holding head, right hand holding smartphone
+    ctx.beginPath();
+    ctx.moveTo(-45, 75);
+    ctx.lineTo(-70, 40);
+    ctx.lineTo(-42, -5); // hand to temple
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(45, 75);
+    ctx.lineTo(85, 100);
+    ctx.lineTo(110, 70); // holding phone forward
+    ctx.stroke();
+
+    // Smartphone
+    ctx.save();
+    ctx.translate(110, 65);
+    ctx.fillStyle = '#2D3436';
+    rrect(-16, -28, 32, 56, 6);
+    ctx.fill();
+    // Red 504 Timeout screen
+    ctx.fillStyle = '#FF7675';
+    ctx.fillRect(-13, -24, 26, 44);
+    ctx.fillStyle = '#D63031';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('504', 0, -6);
+    ctx.fillText('FAIL', 0, 6);
+    ctx.restore();
+  } else if (pose === 'hold_tablet') {
+    // Both arms forward holding the rugged MECH-G tablet
+    ctx.beginPath();
+    ctx.moveTo(-45, 75);
+    ctx.lineTo(-20, 120);
+    ctx.lineTo(20, 115);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(45, 75);
+    ctx.lineTo(70, 120);
+    ctx.lineTo(40, 115);
+    ctx.stroke();
+  } else if (pose === 'lock') {
+    // Arms forward clamping padlock
+    ctx.beginPath();
+    ctx.moveTo(-45, 75);
+    ctx.lineTo(-10, 110);
+    ctx.lineTo(60, 100);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(45, 75);
+    ctx.lineTo(85, 95);
+    ctx.stroke();
+  } else if (pose === 'torque') {
+    // Arms turning torque wrench
+    const wrenchAng = Math.sin(t * 6) * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(-45, 75);
+    ctx.lineTo(5, 110);
+    ctx.lineTo(75, 100);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(45, 75);
+    ctx.lineTo(75, 120);
+    ctx.lineTo(110 + Math.cos(wrenchAng) * 20, 105 + Math.sin(wrenchAng) * 15);
+    ctx.stroke();
+
+    // Steel Torque Wrench body
+    ctx.save();
+    ctx.translate(100, 105);
+    ctx.rotate(wrenchAng);
+    // Knurled grip
+    ctx.fillStyle = '#2D3436';
+    rrect(-30, -8, 60, 16, 4); ctx.fill();
+    // Steel extension bar
+    ctx.fillStyle = '#B2BEC3';
+    ctx.fillRect(30, -5, 130, 10);
+    // Ratchet head & socket
+    ctx.fillStyle = '#636E72';
+    rrect(155, -14, 28, 28, 6); ctx.fill();
+    // Digital LED display on wrench
+    ctx.fillStyle = '#0B0F19';
+    rrect(45, -7, 50, 14, 3); ctx.fill();
+    ctx.fillStyle = C.green;
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    const dispNm = t > 43.0 ? 35 : (t > 40.5 ? 25 : 15);
+    ctx.fillText(`${dispNm} Nm`, 70, 4);
+    ctx.restore();
+  } else {
+    // Double Thumbs Up Triumph!
+    ctx.beginPath();
+    ctx.moveTo(-45, 75);
+    ctx.lineTo(-75, 45);
+    ctx.lineTo(-75, 10);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(45, 75);
+    ctx.lineTo(75, 45);
+    ctx.lineTo(75, 10);
+    ctx.stroke();
+
+    // Thumbs Up hands
+    ctx.fillStyle = C.skin;
+    ctx.beginPath();
+    ctx.arc(-75, 6, 12, 0, TAU);
+    ctx.fill();
+    ctx.fillRect(-79, -12, 8, 16); // left thumb up
+
+    ctx.beginPath();
+    ctx.arc(75, 6, 12, 0, TAU);
+    ctx.fill();
+    ctx.fillRect(71, -12, 8, 16); // right thumb up
+  }
+
+  ctx.restore();
+  ctx.restore();
+}
+
+// 3. The Machine: Hydraulic Valve PRV-992-B & Telemetry
+function drawValveStation(x, y, state, t) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Pipe manifold support
+  ctx.fillStyle = '#636E72';
+  rrect(-140, 180, 280, 45, 8);
+  ctx.fill();
+
+  // Valve Body
+  ctx.fillStyle = '#B2BEC3';
+  rrect(-65, 40, 130, 140, 16);
+  ctx.fill();
+  ctx.strokeStyle = '#2D3436';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Model Name Stamp
+  ctx.fillStyle = '#2D3436';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('PRV-992-B', 0, 115);
+  ctx.font = '12px sans-serif';
+  ctx.fillStyle = '#636E72';
+  ctx.fillText('M12 FLANGE', 0, 135);
+
+  // Pressure Relief Bonnet & Shutoff Lever
+  ctx.fillStyle = '#D63031';
+  rrect(-40, -10, 80, 50, 10);
+  ctx.fill();
+
+  // Yellow Shutoff Lever Handle
+  ctx.save();
+  const leverClosed = state.locked;
+  ctx.translate(0, 15);
+  ctx.rotate(leverClosed ? Math.PI / 2 : 0);
+  ctx.fillStyle = C.yellow;
+  rrect(-12, -8, 110, 24, 8);
+  ctx.fill();
+  ctx.strokeStyle = C.yellowDark;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+
+  // Pressure Gauge (Top Left)
+  ctx.save();
+  ctx.translate(-110, 10);
+  ctx.fillStyle = C.white;
+  ctx.beginPath();
+  ctx.arc(0, 0, 38, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = '#2D3436';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  // Gauge colored zones (green 0-50, yellow 50-150, red 150-250)
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = C.green;
+  ctx.beginPath(); ctx.arc(0, 0, 30, -Math.PI * 0.8, -Math.PI * 0.3); ctx.stroke();
+  ctx.strokeStyle = C.red;
+  ctx.beginPath(); ctx.arc(0, 0, 30, -Math.PI * 0.1, Math.PI * 0.3); ctx.stroke();
+
+  // Animated Needle: 210 bar down to 0 PSI
+  const needlePressure = state.pressure; // 210 -> 0
+  const needleAngle = lerp(-Math.PI * 0.75, Math.PI * 0.25, needlePressure / 210);
+  ctx.strokeStyle = C.red;
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(Math.cos(needleAngle) * 26, Math.sin(needleAngle) * 26);
+  ctx.stroke();
+  ctx.fillStyle = '#2D3436';
+  ctx.beginPath(); ctx.arc(0, 0, 6, 0, TAU); ctx.fill();
+
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#2D3436';
+  ctx.fillText(`${Math.round(needlePressure)} BAR`, 0, 56);
+  ctx.restore();
+
+  // Rupture Spray & Steam (when pressure > 50 bar)
+  if (state.ruptured && state.pressure > 20) {
+    // Red/orange oil jet
+    ctx.fillStyle = 'rgba(255, 94, 30, 0.85)';
+    for (let i = 0; i < 8; i++) {
+      const sprayX = 65 + ((t * 80 + i * 45) % 180);
+      const sprayY = 80 + Math.sin(t * 12 + i) * 35;
+      ctx.beginPath();
+      ctx.arc(sprayX, sprayY, 6 + (sprayX - 65) * 0.04, 0, TAU);
+      ctx.fill();
+    }
+    // Steam puffs
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    for (let i = 0; i < 4; i++) {
+      const puffX = 85 + ((t * 60 + i * 50) % 200);
+      const puffY = 60 - ((t * 40 + i * 30) % 80);
+      ctx.beginPath();
+      ctx.arc(puffX, puffY, 14 + i * 6, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  // Red OSHA Lockout Padlock attached to lever (when locked)
+  if (state.locked) {
+    ctx.save();
+    ctx.translate(65, 45);
+    // Padlock body
+    ctx.fillStyle = C.red;
+    rrect(-22, 10, 44, 40, 8);
+    ctx.fill();
+    ctx.strokeStyle = '#B71540';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Shackle
+    ctx.strokeStyle = '#747D8C';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(0, 10, 14, Math.PI, 0);
+    ctx.stroke();
+
+    // OSHA tag
+    ctx.fillStyle = C.white;
+    rrect(-18, 55, 36, 40, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#2D3436';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = C.red;
+    ctx.font = 'bold 8px sans-serif';
+    ctx.fillText('LOTO', 0, 72);
+    ctx.fillStyle = '#2D3436';
+    ctx.fillText('LOCKED', 0, 84);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// 4. MECH-G Tablet Holographic / Screen Overlay
+function drawProductInterface(x, y, w, h, state, t) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Tablet outer chassis (rugged matte black with orange shock bumpers)
+  ctx.fillStyle = '#1E272E';
+  rrect(0, 0, w, h, 20);
+  ctx.fill();
+  ctx.strokeStyle = '#485460';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Rubberized Corner Bumpers (Safety Orange)
+  ctx.fillStyle = C.orange;
+  const bSize = 24;
+  rrect(-4, -4, bSize, bSize, 8); ctx.fill();
+  rrect(w - bSize + 4, -4, bSize, bSize, 8); ctx.fill();
+  rrect(-4, h - bSize + 4, bSize, bSize, 8); ctx.fill();
+  rrect(w - bSize + 4, h - bSize + 4, bSize, bSize, 8); ctx.fill();
+
+  // Inner Hi-Tech Obsidian Screen
+  ctx.fillStyle = '#0B0F19';
+  rrect(14, 14, w - 28, h - 28, 12);
+  ctx.fill();
+
+  // Screen Header Status Bar
+  ctx.fillStyle = '#1A2338';
+  ctx.fillRect(14, 14, w - 28, 36);
+
+  ctx.fillStyle = C.green;
+  ctx.beginPath(); ctx.arc(32, 32, 6, 0, TAU); ctx.fill();
+
+  ctx.fillStyle = C.white;
+  ctx.font = 'bold 15px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('MECH-G EDGE INTELLIGENCE', 48, 37);
+
+  ctx.fillStyle = C.cyan;
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('100% OFFLINE  |  GOOGLE GEMMA 4 (26B)', w - 30, 36);
+
+  // Content Modes:
+  if (state.mode === 'scan') {
+    // Camera Reticle Viewfinder & Part Recognition
+    const rx = 40, ry = 65, rw = w - 80, rh = h - 95;
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.strokeRect(rx, ry, rw, rh);
+    ctx.setLineDash([]);
+
+    // Green Target Bounding Box locking on valve
+    const boxX = rx + rw * 0.25, boxY = ry + rh * 0.15, boxW = rw * 0.5, boxH = rh * 0.65;
+    ctx.strokeStyle = C.green;
+    ctx.lineWidth = 3;
+    rrect(boxX, boxY, boxW, boxH, 8);
+    ctx.stroke();
+
+    // Corner targeting marks
+    const cm = 16;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(boxX, boxY + cm); ctx.lineTo(boxX, boxY); ctx.lineTo(boxX + cm, boxY);
+    ctx.moveTo(boxX + boxW - cm, boxY); ctx.lineTo(boxX + boxW, boxY); ctx.lineTo(boxX + boxW, boxY + cm);
+    ctx.moveTo(boxX, boxY + boxH - cm); ctx.lineTo(boxX, boxY + boxH); ctx.lineTo(boxX + cm, boxY + boxH);
+    ctx.moveTo(boxX + boxW - cm, boxY + boxH); ctx.lineTo(boxX + boxW, boxY + boxH); ctx.lineTo(boxX + boxW, boxY + boxH - cm);
+    ctx.stroke();
+
+    // Defect Tag Callout
+    ctx.fillStyle = 'rgba(0, 230, 118, 0.18)';
+    rrect(boxX + 10, boxY + 10, 210, 52, 6);
+    ctx.fill();
+    ctx.fillStyle = C.green;
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('PART: PRV-992-B [98.4%]', boxX + 20, boxY + 32);
+    ctx.fillStyle = C.yellow;
+    ctx.font = '12px sans-serif';
+    ctx.fillText('DEFECT: VITON SEAL EXTRUSION', boxX + 20, boxY + 50);
+
+    // Schematic drawing of valve inside the camera viewfinder
+    ctx.save();
+    const scX = boxX + boxW * 0.52;
+    const scY = boxY + boxH * 0.60;
+    // Valve body
+    ctx.fillStyle = '#2C3A47';
+    rrect(scX - 40, scY - 24, 80, 68, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#718093';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Bonnet
+    ctx.fillStyle = '#B71540';
+    rrect(scX - 24, scY - 48, 48, 24, 4);
+    ctx.fill();
+    // Viton seal blowout highlighted in pulsing orange
+    const sealPulse = 1.0 + Math.sin(t * 10) * 0.22;
+    ctx.fillStyle = C.orange;
+    ctx.beginPath();
+    ctx.ellipse(scX + 36, scY - 22, 10 * sealPulse, 5 * sealPulse, 0.2, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = C.red;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Indicator line
+    ctx.strokeStyle = C.yellow;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(scX + 36, scY - 22);
+    ctx.lineTo(scX + 68, scY - 38);
+    ctx.lineTo(scX + 100, scY - 38);
+    ctx.stroke();
+    ctx.fillStyle = C.yellow;
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('SEAL EXTRUDED', scX + 104, scY - 35);
+    ctx.restore();
+
+    // Graph path readout at bottom of screen
+    ctx.fillStyle = '#151D2E';
+    rrect(rx + 10, ry + rh - 45, rw - 20, 36, 6);
+    ctx.fill();
+    ctx.fillStyle = C.cyan;
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('IN-MEMORY GRAPH: Nacelle #4 → Manifold → PRV-992-B → 35.0 Nm Spec (380ms)', rx + rw / 2, ry + rh - 22);
+
+  } else if (state.mode === 'lock') {
+    // OSHA 1910.147 De-Energization Interlock Screen
+    ctx.fillStyle = 'rgba(255, 23, 68, 0.15)';
+    rrect(40, 65, w - 80, h - 95, 10);
+    ctx.fill();
+    ctx.strokeStyle = C.red;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = C.red;
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('OSHA 1910.147 SAFETY INTERLOCK', w / 2, 110);
+
+    ctx.fillStyle = C.white;
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Mandatory De-Energization Gate: Zero Energy State Required', w / 2, 140);
+
+    // Big Lock Status Badge
+    const badgeCol = state.pressure === 0 ? C.green : C.yellow;
+    ctx.fillStyle = badgeCol;
+    ctx.beginPath();
+    ctx.arc(w / 2, 210, 45, 0, TAU);
+    ctx.fill();
+
+    ctx.fillStyle = C.ink;
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(state.pressure === 0 ? 'SAFE' : 'LOCKED', w / 2, 216);
+
+    ctx.fillStyle = state.pressure === 0 ? C.green : C.yellow;
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(state.pressure === 0 ? 'PRESSURE: 0 PSI [READY TO FIX]' : 'PRESSURE: 210 BAR [DEPRESSURIZING...]', w / 2, 285);
+
+  } else if (state.mode === 'torque') {
+    // 3-Pass Star Torque Pattern
+    ctx.fillStyle = '#151D2E';
+    rrect(35, 65, w - 70, h - 95, 10);
+    ctx.fill();
+
+    ctx.fillStyle = C.cyan;
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CALIBRATED STAR TORQUE SPECIFICATION', w / 2, 100);
+
+    // 3 Stage Badges
+    const stages = [
+      { name: 'PASS 1 (SEAT)', val: '15.0 Nm', done: state.torque >= 15 },
+      { name: 'PASS 2 (ALIGN)', val: '25.0 Nm', done: state.torque >= 25 },
+      { name: 'PASS 3 (FINAL)', val: '35.0 Nm', done: state.torque >= 35 }
+    ];
+
+    stages.forEach((stg, i) => {
+      const bx = 60 + i * ((w - 120) / 3);
+      const bw = (w - 150) / 3;
+      ctx.fillStyle = stg.done ? 'rgba(0, 230, 118, 0.25)' : '#222F3E';
+      rrect(bx, 130, bw, 100, 8);
+      ctx.fill();
+      ctx.strokeStyle = stg.done ? C.green : '#576574';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = stg.done ? C.green : C.silver;
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(stg.name, bx + bw / 2, 160);
+      ctx.fillStyle = C.white;
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText(stg.val, bx + bw / 2, 195);
+      if (stg.done) {
+        ctx.fillStyle = C.green;
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText('VERIFIED [OK]', bx + bw / 2, 218);
+      }
+    });
+
+    // Dual Green LED Confirmation Bar
+    ctx.fillStyle = state.torque >= 35 ? C.green : '#576574';
+    rrect(80, 250, w - 160, 36, 18);
+    ctx.fill();
+    ctx.fillStyle = C.ink;
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText(state.torque >= 35 ? 'DUAL GREEN LEDS ACTIVE — SPEC CONFIRMED 35.0 Nm' : 'TORQUING IN PROGRESS...', w / 2, 274);
+  }
+
+  ctx.restore();
+}
+
+// 5. Scene 7 Pitch Medallions Slam & Climax Outro
+function drawPitchOutro(t) {
+  const introProg = clamp((t - 45.5) / 1.5);
+  if (introProg <= 0) return;
+
+  ctx.save();
+  const easeIntro = eo(introProg);
+
+  // Darkened frosted backdrop
+  ctx.fillStyle = `rgba(11, 15, 25, ${0.88 * easeIntro})`;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grand Header
+  ctx.save();
+  ctx.translate(W / 2, lerp(-100, 110, easeIntro));
+  ctx.fillStyle = C.white;
+  ctx.font = 'bold 44px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('MECH-G: FRONTLINE DIAGNOSTIC INTELLIGENCE', 0, 0);
+
+  ctx.fillStyle = C.cyan;
+  ctx.font = '22px sans-serif';
+  ctx.fillText('OFFLINE-FIRST EDGE WORKSPACE POWERED BY GOOGLE GEMMA 4', 0, 42);
+  ctx.restore();
+
+  // 3 Golden Metric Slam Medallions (Staggered drop)
+  const medals = [
+    { title: '84% FASTER MTTR', desc: 'Average repair: 42 min vs 4.8 hrs', col: C.orange, delay: 0.1 },
+    { title: '100% OFFLINE EDGE', desc: 'Zero cloud latency  |  Zero telemetry leakage', col: C.yellow, delay: 0.3 },
+    { title: 'ZERO CASUALTIES', desc: 'OSHA 1910.147 interlock guaranteed', col: C.green, delay: 0.5 }
+  ];
+
+  medals.forEach((m, idx) => {
+    const mProg = clamp((t - 46.5 - m.delay) / 0.6);
+    if (mProg <= 0) return;
+    const mEase = eo(mProg);
+
+    const mx = 670 + idx * 470;
+    const my = lerp(950, 420, mEase);
+
+    ctx.save();
+    ctx.translate(mx, my);
+
+    // Medallion Card Chassis
+    ctx.fillStyle = '#1A2338';
+    rrect(-210, -110, 420, 220, 18);
+    ctx.fill();
+    ctx.strokeStyle = m.col;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Top Glowing Accent Bar
+    ctx.fillStyle = m.col;
+    rrect(-210, -110, 420, 20, 10);
+    ctx.fill();
+
+    // Big Impact Number
+    ctx.fillStyle = C.white;
+    ctx.font = 'bold 30px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(m.title, 0, 0);
+
+    // Descriptive Subhead
+    ctx.fillStyle = C.silver;
+    ctx.font = '16px sans-serif';
+    ctx.fillText(m.desc, 0, 42);
+
+    ctx.restore();
+  });
+
+  // Bottom Call To Action Banner
+  const ctaProg = clamp((t - 49.0) / 0.8);
+  if (ctaProg > 0) {
+    const ctaEase = eo(ctaProg);
+    ctx.save();
+    ctx.translate(1140, lerp(1120, 780, ctaEase));
+
+    ctx.fillStyle = C.yellow;
+    rrect(-360, -35, 720, 70, 35);
+    ctx.fill();
+    ctx.strokeStyle = C.yellowDark;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = C.ink;
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('EXPLORE REPO: github.com/narain-karti/MECH-G', 0, 9);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// 6. Lower-Third Subtitle Bar
+function drawSubtitles(t) {
+  const activeSub = SUBTITLES.find(s => t >= s.start && t <= s.end);
+  if (!activeSub) return;
+
+  const fadeDur = 0.25;
+  let alpha = 1.0;
+  if (t - activeSub.start < fadeDur) alpha = (t - activeSub.start) / fadeDur;
+  else if (activeSub.end - t < fadeDur) alpha = (activeSub.end - t) / fadeDur;
+
+  ctx.save();
+  ctx.globalAlpha = clamp(alpha);
+
+  const barW = 1320, barH = 58;
+  const barX = (W - barW) / 2, barY = H - 90;
+
+  // Modern frosted dark lower-third
+  ctx.fillStyle = 'rgba(26, 37, 54, 0.94)';
+  rrect(barX, barY, barW, barH, 29);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0, 229, 255, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Cyan safety badge at left
+  ctx.fillStyle = C.cyan;
+  ctx.beginPath();
+  ctx.arc(barX + 32, barY + barH / 2, 7, 0, TAU);
+  ctx.fill();
+
+  // Subtitle typography
+  ctx.fillStyle = C.white;
+  ctx.font = 'bold 23px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(activeSub.text, W / 2, barY + barH / 2 + 1);
+
+  ctx.restore();
+}
+
+// ---------- Main Render Frame Function (Time t in Seconds) ----------
+function renderFrame(t) {
+  // Clear frame
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  // 1. Draw Environment
+  drawEnvironment(t);
+
+  // 2. Evaluate Story State based on time t
+  let alexX = 520, alexY = 460, alexPose = 'panic';
+  let valveX = 1100, valveY = 560;
+  let valveState = { ruptured: true, pressure: 210, locked: false, torque: 0 };
+  let tabletVisible = false;
+  let tabletX = 820, tabletY = 320, tabletW = 680, tabletH = 380;
+  let tabletState = { mode: 'scan', pressure: 210, torque: 0 };
+
+  if (t < 7.8) {
+    // Scene 1: 210-Bar Blowout
+    alexX = 500;
+    alexPose = 'panic';
+    valveState = { ruptured: true, pressure: 210, locked: false, torque: 0 };
+
+  } else if (t < 14.3) {
+    // Scene 2: Cloud Timeout & Frustration
+    alexX = 520;
+    alexPose = 'confused';
+    valveState = { ruptured: true, pressure: 210, locked: false, torque: 0 };
+
+    // Giant 4,000-page manual slammed down
+    const bookDrop = clamp((t - 9.5) / 0.5);
+    if (bookDrop > 0) {
+      const bEase = eo(bookDrop);
+      const bY = lerp(200, 700, bEase);
+      ctx.save();
+      ctx.fillStyle = '#DFE6E9';
+      rrect(690, bY - 80, 240, 90, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#2D3436';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = '#D63031';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('OEM MANUAL (4,200 PAGES)', 810, bY - 45);
+      ctx.fillStyle = '#636E72';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('SEARCH TIME: ~4.5 HOURS', 810, bY - 20);
+      ctx.restore();
+    }
+
+  } else if (t < 20.2) {
+    // Scene 3: Deploying MECH-G (Our Product)
+    alexX = 460;
+    alexPose = 'hold_tablet';
+    tabletVisible = true;
+    tabletX = 820; tabletY = 320;
+    tabletState = { mode: 'scan', pressure: 210, torque: 0 };
+    valveState = { ruptured: true, pressure: 210, locked: false, torque: 0 };
+
+  } else if (t < 28.9) {
+    // Scene 4: Step 1 SNAP (Optical Vision & Graph)
+    alexX = 460;
+    alexPose = 'hold_tablet';
+    tabletVisible = true;
+    tabletX = 820; tabletY = 320;
+    tabletState = { mode: 'scan', pressure: 210, torque: 0 };
+    valveState = { ruptured: true, pressure: 210, locked: false, torque: 0 };
+
+  } else if (t < 36.7) {
+    // Scene 5: Step 2 LOCK (OSHA Padlock & Zero Pressure)
+    alexX = 640;
+    alexPose = 'lock';
+    const lockTime = t - 29.5;
+    const isLocked = lockTime > 0;
+    const pDrop = isLocked ? clamp(1.0 - lockTime / 1.5) * 210 : 210;
+
+    valveState = { ruptured: pDrop > 20, pressure: pDrop, locked: isLocked, torque: 0 };
+    tabletVisible = true;
+    tabletX = 1180; tabletY = 300; tabletW = 600; tabletH = 340;
+    tabletState = { mode: 'lock', pressure: pDrop, torque: 0 };
+
+  } else if (t < 45.5) {
+    // Scene 6: Step 3 FIX (Calibrated Star Torque Pass)
+    alexX = 640;
+    alexPose = 'torque';
+    const tTime = t - 36.7;
+    let tVal = 0;
+    if (tTime > 6.0) tVal = 35.0;
+    else if (tTime > 3.5) tVal = 25.0;
+    else if (tTime > 1.0) tVal = 15.0;
+
+    valveState = { ruptured: false, pressure: 0, locked: true, torque: tVal };
+    tabletVisible = true;
+    tabletX = 1180; tabletY = 300; tabletW = 600; tabletH = 340;
+    tabletState = { mode: 'torque', pressure: 0, torque: tVal };
+
+  } else {
+    // Scene 7: Victory & Pitch Outro
+    alexX = 230; alexY = 450;
+    alexPose = 'happy';
+    valveState = { ruptured: false, pressure: 0, locked: true, torque: 35.0 };
+  }
+
+  if (t < 45.5) {
+    // Draw Valve Station
+    drawValveStation(valveX, valveY, valveState, t);
+
+    // Draw Tablet Overlay when active
+    if (tabletVisible) {
+      drawProductInterface(tabletX, tabletY, tabletW, tabletH, tabletState, t);
+    }
+
+    // Draw Alex the Engineer Character
+    drawAlex(alexX, alexY, alexPose, t);
+  } else {
+    // Scene 7 Outro: Draw Pitch backdrop, 3 Medallions and CTA
+    drawPitchOutro(t);
+
+    // Draw Alex proudly on the left side celebrating over the dark backdrop
+    drawAlex(230, 450, 'happy', t);
+  }
+
+  // Draw Subtitles
+  drawSubtitles(t);
+}
+
+// Expose seek, render, DUR, READY for automation / frame capture
+window.DUR = TOTAL_DUR;
+window.render = renderFrame;
+window.renderFrame = renderFrame;
+window.seek = function(frame) {
+  const t = frame / FPS;
+  renderFrame(t);
+  return t;
+};
+
+// Ready on load
+window.READY = true;
+renderFrame(0);
+</script>
+</body>
+</html>

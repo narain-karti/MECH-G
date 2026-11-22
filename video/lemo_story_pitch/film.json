@@ -1,0 +1,17 @@
+{
+  "title": "MECH-G: The Frontline Fix (Animated Pitch Story)",
+  "style": "animated-story",
+  "dur": 52.0,
+  "fps": 24,
+  "bpm": 120.0,
+  "sections": {
+    "scene1_crisis": [0.0, 7.5],
+    "scene2_cloud_fail": [7.5, 14.0],
+    "scene3_deploy_mechg": [14.0, 20.2],
+    "scene4_snap_vision": [20.2, 28.5],
+    "scene5_lock_osha": [28.5, 36.2],
+    "scene6_fix_torque": [36.2, 45.5],
+    "scene7_pitch_outro": [45.5, 52.0]
+  },
+  "subtitles": "subtitles_en.srt"
+}
