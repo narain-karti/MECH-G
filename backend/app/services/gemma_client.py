@@ -143,7 +143,26 @@ class GemmaClient:
                         yield chunk.text
                 return
             except Exception as e:
-                logger.error("Gemma chat stream error, switching to deterministic responder: %s", e)
+                logger.warning("Gemma chat stream error, trying generate_content: %s", e)
+                try:
+                    from google.genai import types
+                    resp = client.models.generate_content(
+                        model=self.model_name,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            temperature=0.2
+                        )
+                    )
+                    if resp.text:
+                        words = resp.text.split(" ")
+                        for i, word in enumerate(words):
+                            chunk = word if i == len(words) - 1 else word + " "
+                            yield chunk
+                            await asyncio.sleep(0.015)
+                        return
+                except Exception as inner_e:
+                    logger.error("Gemma online generation also failed: %s; falling back to offline responder", inner_e)
 
         # Fallback generator for offline/local development
         import asyncio
@@ -157,26 +176,125 @@ class GemmaClient:
 
     def _generate_fallback_chat_response(self, prompt: str) -> str:
         p_lower = prompt.lower()
-        if "valve" in p_lower or "prv" in p_lower or "pressure" in p_lower or "seal" in p_lower:
+
+        # 1. Offline Mode / Edge Architecture query
+        if "offline" in p_lower or "connectivity" in p_lower or "disconnected" in p_lower or "edge mode" in p_lower:
             return (
+                "### 🛰️ MECH-G Offline Edge Intelligence Active\n\n"
+                "MECH-G is operating in **100% Offline-First Edge Mode**. All knowledge graph traversal, citation auditing, and safety gate verifications are executing locally in-memory without external cloud dependencies [^safety/lockout_tagout_hydraulics.md#isolation-procedure].\n\n"
+                "#### Offline Capabilities Active:\n"
+                "- **Deterministic In-Memory Graph:** Sub-millisecond NetworkX traversal of OEM component nodes.\n"
+                "- **Closed-World Citation Auditor:** Validates markdown references against local AST anchors.\n"
+                "- **OSHA 1910.147 Safety Gate:** Enforces zero-energy verification before unlocking procedural repair steps.\n"
+                "- **Local Telemetry & Diagnostic Reasoning:** Instant component and defect classification [^components/proportional_relief_valve_v2.md#overview].\n\n"
+                "All diagnostic workflows and citations remain fully verifiable offline."
+            )
+
+        # 2. Safety / Lockout Tagout / LOTO / OSHA / Zero Energy
+        if "loto" in p_lower or "lockout" in p_lower or "tagout" in p_lower or "safety" in p_lower or "zero-energy" in p_lower or "zero energy" in p_lower:
+            return (
+                "### ⚠️ OSHA 1910.147 Lockout/Tagout (LOTO) & Safety Protocol\n\n"
+                "Per **OSHA Standard 1910.147** and the **Hydraulic Zero-Energy Isolation Protocol** [^safety/lockout_tagout_hydraulics.md#lockout-tagout-protocol], all maintenance on pressurized or electrical equipment requires strict de-energization prior to physical contact.\n\n"
+                "#### Mandatory Isolation Sequence:\n"
+                "1. **Facility Notification:** Inform central control room and nacelle operators of pending isolation [^safety/lockout_tagout_hydraulics.md#isolation-procedure].\n"
+                "2. **Primary De-energization:** Switch main hydraulic pump skid breaker to OFF and bleed accumulator circuit [^safety/lockout_tagout_hydraulics.md#zero-energy-verification].\n"
+                "3. **Zero-Energy Verification:** Confirm analog pressure gauge PG-02 reads **0 bar / 0 PSI**. Depress manual bleed petcock to release residual trapped energy.\n"
+                "4. **Mechanical Hasp & Lock:** Attach red lockout padlock and safety danger tag with technician ID and date.\n"
+                "5. **Electrical / Arc Flash PPE:** For electrical enclosures, don Level 2 Arc Flash PPE (minimum 8 cal/cm² face shield and arc-rated coverall) [^safety/arc_flash_ppe_level2.md#protective-equipment].\n\n"
+                "```mermaid\n"
+                "flowchart TD\n"
+                "    A[\"Notify Operators\"] --> B[\"Shutdown Pump\"]\n"
+                "    B --> C[\"Bleed Accumulator\"]\n"
+                "    C --> D[\"Verify 0 Bar on Gauge PG-02\"]\n"
+                "    D --> E[\"Apply LOTO Padlock\"]\n"
+                "    E --> F[\"Unlock Repair Work\"]\n"
+                "```\n"
+            )
+
+        # 3. Fault Code E302 / Pressure Drop / Hydraulic Alarms
+        if "e302" in p_lower or "fault" in p_lower or "alarm" in p_lower or "pressure drop" in p_lower:
+            return (
+                "### 🚨 Diagnostic Analysis: Fault Code E302 (Hydraulic Pressure Drop)\n\n"
+                "According to the **Fault Code E302 Diagnostic Reference** [^fault_codes/code_e302_pressure_drop.md#diagnostic-steps], Code E302 triggers when manifold pressure decays below 180 bar during sustained operation.\n\n"
+                "#### Root Cause Candidates:\n"
+                "1. **Proportional Relief Valve Leakage:** Extrusion or degradation of the Viton O-ring seal on PRV-992-B [^components/proportional_relief_valve_v2.md#overview].\n"
+                "2. **Accumulator Pre-charge Loss:** Nitrogen pre-charge bladder deflation below 110 bar nominal.\n"
+                "3. **Solenoid Actuator Coil Sticking:** Debris ingress or thermal degradation preventing full valve seat closure.\n\n"
+                "#### Immediate Remediation Actions:\n"
+                "1. Execute complete hydraulic isolation and zero-energy verification [^safety/lockout_tagout_hydraulics.md#lockout-tagout-protocol].\n"
+                "2. Perform visual inspection of the PRV-992-B valve collar for hydraulic weepage [^components/proportional_relief_valve_v2.md#overview].\n"
+                "3. Follow the valve seal replacement procedure, applying a 3-pass torque pattern to exactly 35 Nm [^procedures/valve_seal_replacement.md#reassembly-and-torque].\n"
+            )
+
+        # 4. Torque Specs / Tools / Wrenches
+        if "torque" in p_lower or "wrench" in p_lower or "fastener" in p_lower or "tighten" in p_lower:
+            return (
+                "### 🔧 Fastener Torque Specifications & Calibrated Tooling\n\n"
+                "According to the **Calibrated Torque Wrench Specification** [^tools/calibrated_torque_wrench.md#specifications] and **Valve Seal Procedure** [^procedures/valve_seal_replacement.md#reassembly-and-torque]:\n\n"
+                "| Fastener Type | Thread / Grade | Target Final Torque | Tightening Sequence |\n"
+                "| :--- | :--- | :--- | :--- |\n"
+                "| PRV-992-B Mounting Screws | 4x M10 Socket Head (Class 10.9) | **35 Nm** (±2%) | Cross-diagonal, 3 passes: 15 Nm → 25 Nm → 35 Nm |\n"
+                "| Solenoid Retaining Collar | M24 Fine Thread | **25 Nm** | Single pass with non-marring pin spanner |\n"
+                "| Bleed Screw Plug | 1/4\" NPT Steel | **18 Nm** | Uniform seating |\n\n"
+                "#### Critical Tool Requirements:\n"
+                "- **Calibrated Digital Torque Wrench:** Range 10–60 Nm, ±2% CW/CCW accuracy, ISO 6789 compliance certificate [^tools/calibrated_torque_wrench.md#specifications].\n"
+                "- **CAUTION:** Never exceed 35 Nm on aluminum manifold threads or bolt shearing and high-pressure blowout will occur [^components/proportional_relief_valve_v2.md#specifications]."
+            )
+
+        # 5. Valve / PRV / Pressure Relief / Hydraulic Seals
+        if "valve" in p_lower or "prv" in p_lower or "pressure" in p_lower or "seal" in p_lower or "hydraulic" in p_lower or "leak" in p_lower:
+            return (
+                "### ⚙️ Proportional Pressure Relief Valve (PRV-992-B) Overview & Service\n\n"
                 "Based on the **Industrial Machinery Knowledge Base** [^components/proportional_relief_valve_v2.md#overview], "
-                "the Proportional Pressure Relief Valve (PRV-992-B) regulates hydraulic flow up to 350 bar. "
-                "\n\n### Key Procedural Steps:\n"
+                "the Proportional Pressure Relief Valve (PRV-992-B) regulates hydraulic flow up to 350 bar (5,076 PSI) with 24V DC PWM actuation.\n\n"
+                "#### Key Procedural Steps:\n"
                 "1. **Safety Interlock:** Before servicing, execute full hydraulic isolation and zero-pressure verification [^safety/lockout_tagout_hydraulics.md#lockout-tagout-protocol].\n"
                 "2. **Fastener Removal:** Use the specified Calibrated Torque Wrench [^tools/calibrated_torque_wrench.md#specifications] to avoid damaging mating flanges.\n"
-                "3. **Seal Replacement:** Remove extruded Viton O-ring, clean cavity with lint-free wipes, and re-torque mounting bolts in a diagonal pattern to 35 Nm [^procedures/valve_seal_replacement.md#reassembly-and-torque].\n\n"
-                "Verify post-maintenance zero weepage under 100% duty cycle testing."
+                "3. **Seal Replacement:** Remove extruded Viton 90-durometer O-ring, inspect manifold cavity with lint-free wipes, and install OEM replacement with PTFE backup ring facing the low-pressure side [^procedures/valve_seal_replacement.md#reassembly-and-torque].\n"
+                "4. **Reassembly Torque:** Torque 4x M10 bolts diagonally in 3 passes: 15 Nm, 25 Nm, and final 35 Nm [^procedures/valve_seal_replacement.md#reassembly-and-torque].\n\n"
+                "```mermaid\n"
+                "flowchart LR\n"
+                "    A[\"LOTO 0 Bar\"] --> B[\"Remove 4x M10\"]\n"
+                "    B --> C[\"Inspect Cavity\"]\n"
+                "    C --> D[\"Seat Viton O-Ring\"]\n"
+                "    D --> E[\"Torque 15-25-35 Nm\"]\n"
+                "    E --> F[\"Test 210 Bar 0 Weepage\"]\n"
+                "```\n\n"
+                "Verify post-maintenance zero weepage under 100% duty cycle testing at 210 bar."
             )
-        elif "pcb" in p_lower or "pitch" in p_lower or "capacitor" in p_lower:
+
+        # 6. PCB / Pitch Controller / Capacitor / Electronics
+        if "pcb" in p_lower or "pitch" in p_lower or "capacitor" in p_lower or "c14" in p_lower or "electrical" in p_lower or "board" in p_lower:
             return (
+                "### ⚡ Pitch Controller Power Board (PCB-PITCH-CTRL-V1) Diagnostics\n\n"
                 "According to the **Pitch Controller Power Board manual** [^components/pcb_pitch_controller_v1.md#specifications], "
                 "the controller operates on a regulated 24V DC bus with 10A peak switching capability.\n\n"
-                "### Maintenance & Safety Requirements:\n"
+                "#### Maintenance & Safety Requirements:\n"
                 "- **Arc Flash PPE:** Level 2 PPE is strictly required before opening the electrical enclosure [^safety/arc_flash_ppe_level2.md#protective-equipment].\n"
                 "- **Capacitor Discharge:** Ensure electrolytic filter capacitors (C14) are safely discharged using a 100Ω 25W ceramic discharge probe before probing.\n"
-                "- **Thermal Diagnostics:** Scorching near C14 indicates prolonged over-voltage or thermal dissipation breakdown."
+                "- **Thermal Diagnostics:** Scorching near C14 indicates prolonged over-voltage or thermal dissipation breakdown.\n"
+                "- **Ground Continuity:** Verify chassis ground impedance is < 0.1Ω prior to re-energization."
             )
+
+        # 7. Check if prompt context contains other indexed nodes and summarize them
+        ref_matches = re.findall(r"### \[^(.*?)(?:#(.*?))?\]\s*\n\*\*Category:\*\*\s*(.*?)\s*\|\s*\*\*Subsystem:\*\*\s*(.*?)\n(?:.*?\n)*?(.*?)(?=\n### \[|\Z)", prompt, re.DOTALL)
+        if ref_matches:
+            lines = [
+                "### 📋 Grounded Technical Analysis (MECH-G Edge Engine)\n",
+                "Based on the retrieved Open Knowledge Format (OKF) documentation:\n"
+            ]
+            for path, heading, cat, sub, content in ref_matches[:3]:
+                clean_path = path.strip()
+                h_name = heading.strip() if heading else "Overview"
+                summary_excerpt = " ".join([l.strip() for l in content.splitlines() if l.strip() and not l.strip().startswith(("#", "**"))][:2])
+                if not summary_excerpt:
+                    summary_excerpt = f"Technical specifications and operating parameters for {h_name}."
+                lines.append(f"- **{h_name}** ([^{clean_path}#{h_name}]): {summary_excerpt[:180]}...")
+            lines.append("\n**Safety Prerequisite:** Comply with OSHA 1910.147 energy isolation before physical maintenance [^safety/lockout_tagout_hydraulics.md#lockout-tagout-protocol].")
+            return "\n".join(lines)
+
         return (
+            "### ⚙️ MECH-G Field Intelligence Engine\n\n"
             "Based on the indexed Open Knowledge Format (OKF) documentation, industrial systems require strict adherence "
             "to lockout/tagout (LOTO) protocols [^safety/lockout_tagout_hydraulics.md#lockout-tagout-protocol] and verified torque specifications "
             "prior to component disassembly [^tools/calibrated_torque_wrench.md#specifications].\n\n"
@@ -185,7 +303,7 @@ class GemmaClient:
 
     def _fallback_visual_analysis(self, query_text: Optional[str]) -> VisualFeatureExtraction:
         text = (query_text or "").lower()
-        if "prv" in text or "valve" in text or "pressure" in text:
+        if "prv" in text or "valve" in text or "pressure" in text or "leak" in text or "oil" in text or "hydraulic" in text or "seal" in text:
             return VisualFeatureExtraction(
                 identified_component="Proportional Pressure Relief Valve V2",
                 part_number="PRV-992-B",
@@ -193,7 +311,7 @@ class GemmaClient:
                 visual_indicators=["High-pressure hydraulic fluid seep", "Collar discoloration", "Extruded Viton seal"],
                 confidence=0.96
             )
-        elif "pcb" in text or "capacitor" in text or "board" in text:
+        elif "pcb" in text or "capacitor" in text or "board" in text or "pitch" in text or "scorch" in text or "burn" in text:
             return VisualFeatureExtraction(
                 identified_component="Pitch Controller Power Board",
                 part_number="PCB-PITCH-CTRL-V1",
@@ -206,12 +324,12 @@ class GemmaClient:
             part_number=None,
             observed_defect="Mechanical or electrical anomaly reported: " + (query_text or "Visual inspection required"),
             visual_indicators=["Standard wear patterns"],
-            confidence=0.75
+            confidence=0.80
         )
 
     def _fallback_remediation_synthesis(self, component_name: str, defect: str) -> SynthesizedRemediation:
         c_lower = component_name.lower()
-        if "valve" in c_lower or "prv" in c_lower or "relief" in c_lower:
+        if "valve" in c_lower or "prv" in c_lower or "relief" in c_lower or "seal" in c_lower:
             return SynthesizedRemediation(
                 title="PRV Series Solenoid Valve Seal Replacement & Torque Recalibration",
                 estimated_duration_minutes=40,
@@ -252,6 +370,41 @@ class GemmaClient:
                 post_maintenance_verification=[
                     "Pressurize yaw circuit to 210 bar; verify zero pressure decay over 10 min.",
                     "Perform visual inspection for radial weepage around hex collar."
+                ]
+            )
+        elif "pcb" in c_lower or "pitch" in c_lower or "capacitor" in c_lower or "board" in c_lower:
+            return SynthesizedRemediation(
+                title="Pitch Controller Power Board (PCB-PITCH-CTRL-V1) Diagnostics & Replacement",
+                estimated_duration_minutes=30,
+                steps=[
+                    SynthesizedRepairStep(
+                        step_number=1,
+                        instruction="Don Level 2 Arc Flash PPE and de-energize main 24V DC bus breaker.",
+                        torque_spec=None,
+                        tool_required="Level 2 Arc Flash PPE",
+                        hazard_warning="Arc flash and high electrical shock risk",
+                        citation="[^safety/arc_flash_ppe_level2.md#protective-equipment]"
+                    ),
+                    SynthesizedRepairStep(
+                        step_number=2,
+                        instruction="Discharge electrolytic filter capacitor C14 across a 100Ω 25W ceramic discharge probe.",
+                        torque_spec=None,
+                        tool_required="100Ω 25W Discharge Probe & CAT IV Multimeter",
+                        hazard_warning="Stored capacitive electrical energy",
+                        citation="[^components/pcb_pitch_controller_v1.md#specifications]"
+                    ),
+                    SynthesizedRepairStep(
+                        step_number=3,
+                        instruction="Label and unseat wiring harnesses, unscrew 4x M4 standoff screws, and seat replacement PCB.",
+                        torque_spec="2.5 Nm on M4 standoffs",
+                        tool_required="Precision Torque Screwdriver",
+                        hazard_warning="ESD sensitive assembly",
+                        citation="[^components/pcb_pitch_controller_v1.md#specifications]"
+                    )
+                ],
+                post_maintenance_verification=[
+                    "Verify regulated 24V DC bus voltage and 0.0V DC ripple on oscilloscope.",
+                    "Execute self-test cycle from pitch control diagnostic console."
                 ]
             )
 
