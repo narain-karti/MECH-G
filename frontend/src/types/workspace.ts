@@ -37,6 +37,7 @@ export interface ChatMessage {
 export interface Conversation {
   id: string;
   title: string;
+  notebook_id?: string | null;
   selected_document_ids: string[];
   created_at: string;
   updated_at: string;

@@ -291,7 +291,7 @@ export const DiagnosticPage: React.FC = () => {
                     }`}
                   >
                     <div className="font-semibold truncate">{sample.title}</div>
-                    <div className="text-[10px] text-[#6B7280] truncate mt-0.5">{sample.component}</div>
+                    <div className="text-[10px] text-[#6B7280] truncate mt-0.5">{sample.subsystem}</div>
                   </button>
                 ))}
               </div>
@@ -890,13 +890,13 @@ export const DiagnosticPage: React.FC = () => {
 
               <div className="p-3 bg-[#141518] rounded-xl border border-[#27272A] space-y-1">
                 <div className="text-[10px] font-mono text-[#9CA3AF]">TARGET NODE</div>
-                <div className="text-white font-mono text-[11px]">{selectedCitation.node_id}</div>
+                <div className="text-white font-mono text-[11px]">{selectedCitation.node_path}</div>
               </div>
 
               <div className="p-3 bg-[#141518] rounded-xl border border-[#27272A] space-y-1">
                 <div className="text-[10px] font-mono text-[#9CA3AF]">STATUS & PROVENANCE</div>
                 <div className="text-emerald-400 font-bold">
-                  {selectedCitation.status === "VERIFIED" ? "✓ VERIFIED IN AST GRAPH" : "UNVERIFIED"}
+                  {selectedCitation.verification_status === "verified" ? "✓ VERIFIED IN AST GRAPH" : "UNVERIFIED"}
                 </div>
               </div>
             </div>

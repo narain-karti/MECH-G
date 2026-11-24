@@ -182,7 +182,7 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
               {title}
             </h1>
             {notebookModel && (
-              <Badge tone="cyan" variant="subtle" size="sm" className="font-mono text-[10px]">
+              <Badge tone="primary" size="sm" className="font-mono text-[10px]">
                 {notebookModel}
               </Badge>
             )}
@@ -389,16 +389,19 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
       </div>
 
       {/* Onboarding Checklist Modal */}
-      <OnboardingChecklist
-        isOpen={showChecklist}
-        onClose={() => setShowChecklist(false)}
-        tasks={onboardingTasks}
-        onToggleTask={(id) => {
-          setOnboardingTasks((prev) =>
-            prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
-          );
-        }}
-      />
+      {showChecklist && (
+        <div className="fixed bottom-4 right-4 z-50 w-96">
+          <OnboardingChecklist
+            tasks={onboardingTasks}
+            onDismiss={() => setShowChecklist(false)}
+            onTaskComplete={(id) => {
+              setOnboardingTasks((prev) =>
+                prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
+              );
+            }}
+          />
+        </div>
+      )}
     </header>
   );
 };

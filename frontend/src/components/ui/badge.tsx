@@ -8,11 +8,12 @@ import { NumberRoll } from "./number-roll";
 import { TextMorph } from "./text-morph";
 import { EASE_OUT, useInteractionReducedMotion } from "./ui-interaction-motion";
 
-export type BadgeTone = "neutral" | "primary" | "success" | "warning" | "danger";
+export type BadgeTone = "neutral" | "primary" | "success" | "warning" | "danger" | "cyan" | "emerald" | "purple" | "blue" | "rose" | "amber";
 
 export interface BadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, "children"> {
-  children?: string;
+  children?: React.ReactNode;
   tone?: BadgeTone;
+  variant?: "solid" | "subtle";
   outline?: boolean;
   dot?: boolean | "pulse";
   count?: number;
@@ -28,6 +29,12 @@ const FILL: Record<BadgeTone, string> = {
   success: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
   warning: "bg-amber-500/14 text-amber-700 dark:text-amber-400",
   danger: "bg-red-500/10 text-red-600 dark:text-red-400",
+  cyan: "bg-cyan-500/12 text-cyan-400",
+  emerald: "bg-emerald-500/12 text-emerald-400",
+  purple: "bg-purple-500/12 text-purple-400",
+  blue: "bg-blue-500/12 text-blue-400",
+  rose: "bg-rose-500/12 text-rose-400",
+  amber: "bg-amber-500/14 text-amber-400",
 };
 const LINE: Record<BadgeTone, string> = {
   neutral: "text-foreground shadow-[inset_0_0_0_1px_var(--border)]",
@@ -35,8 +42,26 @@ const LINE: Record<BadgeTone, string> = {
   success: "text-emerald-700 dark:text-emerald-400 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--color-emerald-500)_40%,transparent)]",
   warning: "text-amber-700 dark:text-amber-400 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--color-amber-500)_45%,transparent)]",
   danger: "text-red-600 dark:text-red-400 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--color-red-500)_40%,transparent)]",
+  cyan: "text-cyan-400 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)]",
+  emerald: "text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.35)]",
+  purple: "text-purple-400 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.35)]",
+  blue: "text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.35)]",
+  rose: "text-rose-400 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.35)]",
+  amber: "text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.35)]",
 };
-const DOT: Record<BadgeTone, string> = { neutral: "bg-muted-foreground", primary: "bg-primary", success: "bg-emerald-500", warning: "bg-amber-500", danger: "bg-red-500" };
+const DOT: Record<BadgeTone, string> = {
+  neutral: "bg-muted-foreground",
+  primary: "bg-primary",
+  success: "bg-emerald-500",
+  warning: "bg-amber-500",
+  danger: "bg-red-500",
+  cyan: "bg-cyan-400",
+  emerald: "bg-emerald-400",
+  purple: "bg-purple-400",
+  blue: "bg-blue-400",
+  rose: "bg-rose-400",
+  amber: "bg-amber-400",
+};
 
 export function Badge({ children, tone = "neutral", outline, dot, count, max = 99, showZero, icon, size = "md", className = "", ...props }: BadgeProps) {
   const reduced = useInteractionReducedMotion();
@@ -67,7 +92,7 @@ export function Badge({ children, tone = "neutral", outline, dot, count, max = 9
           <NumberRoll value={Math.max(0, count)} />
         )
       ) : (
-        children && <TextMorph>{children}</TextMorph>
+        children && (typeof children === "string" ? <TextMorph>{children}</TextMorph> : children)
       )}
     </span>
   );

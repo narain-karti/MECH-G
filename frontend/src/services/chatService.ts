@@ -11,11 +11,11 @@ export interface StreamCallbacks {
 }
 
 export class ChatService {
-  static async createConversation(title = "New Conversation", selectedDocIds: string[] = []): Promise<Conversation> {
+  static async createConversation(title = "New Conversation", selectedDocIds: string[] = [], notebookId?: string): Promise<Conversation> {
     const res = await fetchWithTimeout("/api/chat/conversations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, selected_document_ids: selectedDocIds }),
+      body: JSON.stringify({ title, selected_document_ids: selectedDocIds, notebook_id: notebookId }),
     });
     if (!res.ok) {
       throw new Error(`Failed to create conversation: ${res.statusText}`);

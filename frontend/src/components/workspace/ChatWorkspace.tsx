@@ -285,8 +285,8 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
               </h1>
 
               <div className="flex items-center gap-2 mt-2.5">
-                <Badge tone="primary" variant="subtle" dot="breathe">
-                  {selectedSources.length} {selectedSources.length === 1 ? "source active" : "sources active"}
+                <Badge tone="primary" dot="pulse">
+                  {`${selectedSources.length} ${selectedSources.length === 1 ? "source active" : "sources active"}`}
                 </Badge>
                 <span className="text-xs text-[#9CA3AF]">
                   · MECH-G Knowledge Base & Gemma 4 Multimodal Engine
@@ -554,11 +554,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
                     align="start"
                   />
 
-                  <VoiceInput
-                    onTranscript={(text) =>
-                      setComposerInput((prev) => (prev ? `${prev} ${text}` : text))
-                    }
-                  />
+                  <VoiceInput status="idle" />
 
                   <div className="hidden sm:flex items-center text-[11px] text-[#8E8E93] pl-2 border-l border-[#27272A]">
                     {selectedSources.length} {selectedSources.length === 1 ? "source" : "sources"}
