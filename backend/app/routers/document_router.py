@@ -72,10 +72,10 @@ async def delete_document(document_id: str, engine: OKFGraphEngine = Depends(get
 
     # Safe node removal
     node_paths = doc.get("node_paths", [])
-    okf_dir = settings.resolved_okf_dir
+    okf_dir = settings.resolved_okf_dir.resolve()
     for np in node_paths:
-        target_file = okf_dir / np
-        if target_file.exists():
+        target_file = (okf_dir / np).resolve()
+        if target_file.is_relative_to(okf_dir) and target_file.exists():
             try:
                 target_file.unlink()
                 logger.info("Deleted generated node file: %s", target_file)
@@ -83,8 +83,9 @@ async def delete_document(document_id: str, engine: OKFGraphEngine = Depends(get
                 logger.warning("Could not delete node file %s: %s", target_file, e)
 
     # Remove stored raw file if exists
-    raw_path = Path(doc["stored_path"])
-    if raw_path.exists() and raw_path.is_file() and raw_path.name != "index.md":
+    raw_dir = settings.resolved_raw_docs_dir.resolve()
+    raw_path = Path(doc["stored_path"]).resolve()
+    if raw_path.is_relative_to(raw_dir) and raw_path.exists() and raw_path.is_file():
         try:
             raw_path.unlink()
         except Exception as e:

@@ -21,6 +21,7 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     db_path = get_db_path()
     conn = sqlite3.connect(str(db_path), check_same_thread=False, timeout=10.0)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA foreign_keys = ON;")
     try:
         yield conn
@@ -124,6 +125,19 @@ def init_database() -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_notebook_documents_notebook ON notebook_documents(notebook_id);
         CREATE INDEX IF NOT EXISTS idx_issues_notebook ON issues(notebook_id, status);
+
+        CREATE TABLE IF NOT EXISTS diagnostic_sessions (
+            id TEXT PRIMARY KEY,
+            payload_json TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value_json TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
         """)
 
         # Lightweight forward migrations for tables

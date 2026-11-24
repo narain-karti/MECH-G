@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     # Security & Safety
     cors_origins: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+    api_access_token: str = ""
     strict_safety_gate: bool = True
     offline_mode: bool = False
 

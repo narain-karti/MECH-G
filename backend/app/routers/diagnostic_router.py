@@ -42,8 +42,12 @@ async def run_hardware_diagnostic(
     image_mime: str = "image/jpeg"
 
     if image:
-        image_bytes = await image.read()
         image_mime = image.content_type or "image/jpeg"
+        if not image_mime.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Uploaded file must be an image.")
+        image_bytes = await image.read(10 * 1024 * 1024 + 1)
+        if len(image_bytes) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Image exceeds 10 MB limit.")
 
     if not image_bytes and not query_text:
         raise HTTPException(status_code=400, detail="Either an image or query_text must be provided.")
@@ -57,7 +61,7 @@ async def run_hardware_diagnostic(
         return response
     except Exception as e:
         logger.error("Diagnostic execution error: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Diagnostic error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Diagnostic processing failed.")
 
 
 @router.post("/{diagnostic_id}/safety-ack", response_model=SafetyAckResponse)
@@ -85,7 +89,7 @@ async def get_diagnostic_session(
     service: DiagnosticService = Depends(get_diagnostic_service)
 ):
     """Retrieves an existing diagnostic session and its verified state."""
-    session = service.active_sessions.get(diagnostic_id)
+    session = service.get_session(diagnostic_id)
     if not session:
         raise HTTPException(status_code=404, detail="Diagnostic session not found")
     return session
@@ -101,7 +105,7 @@ async def export_work_order(
     OSHA 1910.147 LOTO permit records, and torque calibrations.
     """
     from datetime import datetime, timezone
-    session = service.active_sessions.get(diagnostic_id)
+    session = service.get_session(diagnostic_id)
     if not session:
         raise HTTPException(status_code=404, detail="Diagnostic session not found")
 

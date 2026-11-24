@@ -72,7 +72,11 @@ class RetrievalService:
         ]
 
         if not candidates:
-            candidates = all_nodes
+            return {
+                "context_text": "No indexed OKF knowledge nodes for the selected documents.",
+                "retrieved_nodes": [],
+                "node_paths": []
+            }
 
         query_tokens = tokenize(query)
         q_lower = query.strip().lower()

@@ -1,7 +1,8 @@
 import os
 import re
 import yaml
-import logging
+import logging
+import threading
 from typing import Dict, List, Optional, Any, Set
 from pathlib import Path
 import networkx as nx
@@ -16,7 +17,8 @@ class OKFGraphEngine:
     """In-memory Directed Knowledge Graph managing OKF nodes, links, and safety traversals."""
 
     def __init__(self, root_dir: str):
-        self.root_dir = Path(root_dir)
+        self.root_dir = Path(root_dir)
+        self._lock = threading.RLock()  # ponytail: single RLock, swap to atomic snapshot if read contention grows
         self.graph = nx.DiGraph()
         self.nodes_by_path: Dict[str, OKFNode] = {}
         self.part_number_map: Dict[str, str] = {}  # part_no -> node_path

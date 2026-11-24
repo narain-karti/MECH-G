@@ -5,6 +5,7 @@ from typing import Optional, List, Dict
 from pathlib import Path
 
 from app.config import settings
+from app.database.connection import get_db_connection
 from app.models.diagnostic_models import (
     DiagnosticResponse,
     DetectedComponent,
@@ -152,11 +153,35 @@ class DiagnosticService:
             active_subgraph_nodes=active_subgraph_paths
         )
 
-        self.active_sessions[diag_id] = response
+        self._save_session(response)
         return response
 
+    def _save_session(self, session: DiagnosticResponse) -> None:
+        with get_db_connection() as conn:
+            conn.execute(
+                """INSERT INTO diagnostic_sessions (id, payload_json, created_at, updated_at)
+                   VALUES (?, ?, datetime('now'), datetime('now'))
+                   ON CONFLICT(id) DO UPDATE SET payload_json = excluded.payload_json, updated_at = datetime('now')""",
+                (session.diagnostic_id, session.model_dump_json()),
+            )
+        self.active_sessions[session.diagnostic_id] = session
+
+    def get_session(self, diagnostic_id: str) -> Optional[DiagnosticResponse]:
+        if diagnostic_id in self.active_sessions:
+            return self.active_sessions[diagnostic_id]
+        with get_db_connection() as conn:
+            row = conn.execute(
+                "SELECT payload_json FROM diagnostic_sessions WHERE id = ?",
+                (diagnostic_id,),
+            ).fetchone()
+        if not row:
+            return None
+        session = DiagnosticResponse.model_validate_json(row["payload_json"])
+        self.active_sessions[diagnostic_id] = session
+        return session
+
     def acknowledge_safety(self, req: SafetyAckRequest) -> SafetyAckResponse:
-        session = self.active_sessions.get(req.diagnostic_id)
+        session = self.get_session(req.diagnostic_id)
         if not session:
             raise KeyError(f"Diagnostic session {req.diagnostic_id} not found")
 
@@ -164,6 +189,7 @@ class DiagnosticService:
         session.safety_interlocks.acknowledged = True
         session.safety_interlocks.acknowledged_by = req.technician_id
         session.safety_interlocks.acknowledged_at = timestamp
+        self._save_session(session)
 
         return SafetyAckResponse(
             diagnostic_id=req.diagnostic_id,

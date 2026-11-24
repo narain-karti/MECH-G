@@ -1,7 +1,8 @@
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 
+from app.database.repository import DocumentRepository
 from app.models.okf_models import OKFGraphStats, OKFNode
 from app.models.chat_models import ReactFlowGraphResponse
 from app.services.graph_engine import OKFGraphEngine
@@ -31,23 +32,43 @@ async def get_graph_statistics(engine: OKFGraphEngine = Depends(get_graph_engine
     return engine.get_stats()
 
 
+def _notebook_node_paths(notebook_id: Optional[str]) -> Optional[set[str]]:
+    if not notebook_id:
+        return None
+    docs = DocumentRepository.list_for_notebook(notebook_id)
+    doc_ids = [d["id"] for d in docs]
+    return set(DocumentRepository.get_nodes_for_documents(doc_ids)) if doc_ids else set()
+
+
 @router.get("/react-flow", response_model=ReactFlowGraphResponse)
-async def get_react_flow_graph(engine: OKFGraphEngine = Depends(get_graph_engine)):
+async def get_react_flow_graph(
+    notebook_id: Optional[str] = Query(default=None),
+    engine: OKFGraphEngine = Depends(get_graph_engine),
+):
     """
     Returns node and edge representations structured directly for @xyflow/react,
     including coordinate positions, category metadata, and relationship types.
     """
-    return engine.get_react_flow_graph()
+    data = engine.get_react_flow_graph()
+    allowed = _notebook_node_paths(notebook_id)
+    if allowed is None:
+        return data
+    nodes = [n for n in data["nodes"] if n["id"] in allowed]
+    edges = [e for e in data["edges"] if e["source"] in allowed and e["target"] in allowed]
+    return {"nodes": nodes, "edges": edges, "stats": data["stats"]}
 
 
 @router.get("/search")
 async def search_graph_nodes(
     q: str = Query(..., min_length=1, description="Search query string"),
     limit: int = Query(15, ge=1, le=50),
+    notebook_id: Optional[str] = Query(default=None),
     engine: OKFGraphEngine = Depends(get_graph_engine)
 ) -> List[Dict[str, Any]]:
     """Performs fuzzy and token-level search across all loaded OKF knowledge nodes."""
-    return engine.search_nodes(query=q, limit=limit)
+    results = engine.search_nodes(query=q, limit=limit)
+    allowed = _notebook_node_paths(notebook_id)
+    return results if allowed is None else [r for r in results if r.get("relative_path") in allowed]
 
 
 @router.get("/neighborhood/{node_path:path}")

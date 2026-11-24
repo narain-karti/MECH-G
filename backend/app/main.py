@@ -1,7 +1,9 @@
 import logging
+import secrets
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.services.graph_engine import OKFGraphEngine
@@ -82,6 +84,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def api_token_guard(request: Request, call_next):
+    token = settings.api_access_token.strip()
+    if token and request.url.path.startswith("/api/") and request.method != "OPTIONS":
+        auth = request.headers.get("authorization", "")
+        supplied = auth[7:].strip() if auth.lower().startswith("bearer ") else request.headers.get("x-api-key", "").strip()
+        if not supplied or not secrets.compare_digest(supplied, token):
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return await call_next(request)
 
 # Register API Routers
 app.include_router(ingest_router.router)
